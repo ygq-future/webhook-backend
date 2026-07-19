@@ -511,6 +511,8 @@ export function EndpointDialog({
                 <code className="rounded bg-white/10 px-1">message</code> 即可；嵌套
                 <code className="rounded bg-white/10 px-1">a.b.c</code>，数组
                 <code className="rounded bg-white/10 px-1">a[0].b</code>。
+                <span className="text-foreground">未配置映射时，请求体顶层字段会自动作为变量使用</span>（如直接写{' '}
+                <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>）。
               </p>
             </div>
           </section>
@@ -648,11 +650,16 @@ export function EndpointDialog({
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>邮件主题模板</Label>
+                      <Label>邮件主题模板（支持 {'{{变量}}'}）</Label>
                       <Input value={t.subjectTpl} onChange={e => updateTarget(i, { subjectTpl: e.target.value })} />
                     </div>
                     <div className="space-y-2">
                       <Label>邮件正文模板（支持 {'{{变量}}'}）</Label>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        未配置映射时，可直接写请求体顶层字段（如{' '}
+                        <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>）
+                        ；已配置映射则优先使用映射变量名。
+                      </p>
                       <Textarea value={t.bodyTpl} onChange={e => updateTarget(i, { bodyTpl: e.target.value })} />
                     </div>
                     <div className="space-y-2">
@@ -726,7 +733,9 @@ export function EndpointDialog({
                       根节点是<span className="text-foreground">事件上下文</span>：
                       <code className="rounded bg-white/10 px-1">body.xxx</code>
                       取请求体字段，或直接写映射出的变量名（如 <code className="rounded bg-white/10 px-1">text</code>
-                      ）。留空则发送整个请求体。
+                      ）。未配置映射时，请求体顶层字段会自动作为变量（如{' '}
+                      <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>
+                      直接取 <code className="rounded bg-white/10 px-1">body.message</code>）。留空则发送整个请求体。
                     </p>
                     <div className="space-y-2">
                       <Label>Body 模板（支持 {'{{变量}}'}）</Label>

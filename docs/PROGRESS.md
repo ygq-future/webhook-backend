@@ -13,8 +13,8 @@
 |----|------|
 | 当前阶段 | **实现完成（Implemented）** — M1–M7 全部完成并端到端验证 |
 | 代码实现 | ✅ 完成（M1–M7 全部完成） |
-| 下一步 | 交付使用；后续可选：真实 SMTP 发信联调、Docker 镜像实机构建、更多渠道（Phone/WS） |
-| 最近更新 | 2026-07-19 16:50 |
+| 下一步 | 交付使用；后续可选：更新 WebUI 提示说明、真实 SMTP 发信联调、Docker 镜像实机构建、更多渠道（Phone/WS） |
+| 最近更新 | 2026-07-19 19:05 |
 
 ### 交付物清单
 
@@ -48,6 +48,15 @@
 ## 3. 决策日志（Decision Log）
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
+
+### 2026-07-19 18:58 — 修复：无 mapping 时出站模板可直接引用请求体顶层字段
+- **Bug 报告**：用户截图显示，入站 body `{"platform":"qq","message":"adbc","content":"HTTP 测试消息"}`，出站 bodyTpl `{"text":"{{message}}"}`，未配置 mapping 时实际渲染为 `{"text":""}`；必须额外配置 `message->message` 映射才能取到值。
+- **根因**：`eventContext` 仅把 `parser.mapping` 映射出的 `vars` 暴露到顶层模板变量，未把请求体顶层字段作为便捷变量。
+- **修复**：`server/src/services/event.ts` 的 `eventContext` 现在先把普通对象类型的 `body` 顶层字段展开到上下文，再 spread `event.vars`；显式 mapping 优先级更高，数组/字符串 body 不展开。保留 `body/vars/headers/query/raw/method` 命名空间。
+- **新增测试**：`server/src/services/event.test.ts` 覆盖 parseBody、buildEvent、eventContext（含优先级、数组/字符串边界）。
+- **验证**：用户场景复现通过（无 mapping 时 `{{message}}`→`"adbc"`，出站 requestBody 为 `{"text":"adbc"}`）；`bun test` 14 全过；format/lint/typecheck/build:server/build:web 全绿。提交 `9ed1cf8`（2 files）。
+- **提示更新**：WebUI 的 mapping 与 bodyTpl 提示文本应说明“未配置 mapping 时，请求体顶层字段会自动作为变量使用”。
+
 
 ### 2026-07-19 16:50 — 完成 M7 加固（Webhook 限流）+ 全量验证，项目实现完成
 - **限流**：新增 `middleware/rate-limit.ts`——固定窗口内存限流器（默认 120 次/60s/客户端，`RATE_LIMIT_WINDOW_MS`/`RATE_LIMIT_MAX` 可调，`MAX<=0` 关闭）；客户端标识优先 `x-forwarded-for`/`x-real-ip`，回退 Bun `requestIP`；响应带 `X-RateLimit-{Limit,Remaining,Reset}`，超限返回 429 + `Retry-After`；惰性清理过期桶。已挂载到 `/wh/:subpath` 公开入口。

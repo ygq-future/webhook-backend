@@ -56,10 +56,7 @@ describe('eventContext', () => {
   })
 
   test('body 为字符串时不展开', () => {
-    const event = buildEvent(
-      { ...baseInput, raw: 'plain text' },
-      { source: 'body', contentType: 'text' },
-    )
+    const event = buildEvent({ ...baseInput, raw: 'plain text' }, { source: 'body', contentType: 'text' })
     const ctx = eventContext(event)
     expect(ctx.body).toBe('plain text')
     expect(
