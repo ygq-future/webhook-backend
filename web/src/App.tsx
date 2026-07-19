@@ -1,20 +1,50 @@
-import { Routes, Route } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
-function Dashboard() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">Webhook 转发中心</h1>
-      <p className="text-muted-foreground">脚手架已就绪（里程碑 M1）</p>
-      <Button>新建子路径</Button>
-    </div>
-  )
+import { Layout } from '@/components/layout'
+import { useAuth } from '@/lib/auth'
+import Login from '@/pages/Login'
+import Dashboard from '@/pages/Dashboard'
+import Endpoints from '@/pages/Endpoints'
+import Accounts from '@/pages/Accounts'
+
+function Protected({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  if (loading) {
+    return <div className="text-muted-foreground flex min-h-screen items-center justify-center">加载中…</div>
+  }
+  if (!user) return <Navigate to="/login" replace />
+  return <Layout>{children}</Layout>
 }
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Dashboard />} />
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <Protected>
+            <Dashboard />
+          </Protected>
+        }
+      />
+      <Route
+        path="/endpoints"
+        element={
+          <Protected>
+            <Endpoints />
+          </Protected>
+        }
+      />
+      <Route
+        path="/accounts"
+        element={
+          <Protected>
+            <Accounts />
+          </Protected>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

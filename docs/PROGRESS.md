@@ -11,10 +11,10 @@
 
 | 项 | 状态 |
 |----|------|
-| 当前阶段 | **实现阶段（Implement）** — 后端 M2–M4 已完成并端到端验证，待推进 M5 WebUI |
-| 代码实现 | 🟡 进行中（M1–M4 完成；M5–M7 进行中） |
-| 下一步 | 推进 M5 WebUI（登录/仪表盘/子路径/账号管理，shadcn/ui），见 [§4 下一步计划](#4-下一步计划) |
-| 最近更新 | 2026-07-19 15:30 |
+| 当前阶段 | **实现阶段（Implement）** — 前后端 M1–M5 已完成并端到端验证，待推进 M6 部署 |
+| 代码实现 | 🟡 进行中（M1–M5 完成；M6–M7 进行中） |
+| 下一步 | 推进 M6 部署（多阶段 Dockerfile + compose + README），见 [§4 下一步计划](#4-下一步计划) |
+| 最近更新 | 2026-07-19 16:10 |
 
 ### 交付物清单
 
@@ -37,7 +37,7 @@
 | **M2 持久化与账号** | DAL（SQLite/Postgres，手写 DAL）+ 账号 CRUD + 授权码加解密 | ✅ 已完成 |
 | **M3 子路径与接收** | endpoints CRUD + `ANY /wh/:subpath` 接收 + 接入契约（methods/parser/auth）+ 转发引擎 | ✅ 已完成 |
 | **M4 转发通道** | `ForwardChannel` 抽象 + `EmailChannel` + `HttpChannel`（出站转发）+ 日志；预留 Phone/WS | ✅ 已完成 |
-| **M5 WebUI** | 登录、仪表盘、子路径管理、账号管理页（shadcn/ui） | 🟡 进行中 |
+| **M5 WebUI** | 登录、仪表盘、子路径管理、账号管理页（shadcn/ui） | ✅ 已完成 |
 | **M6 部署** | Dockerfile + compose + 健康检查 + 文档 | ⬜ 未开始 |
 | **M7 加固** | 限流/重试、签名校验、压测 | ⬜ 未开始 |
 
@@ -48,6 +48,18 @@
 ## 3. 决策日志（Decision Log）
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
+
+### 2026-07-19 16:10 — 完成 M5 WebUI（shadcn/ui 管理台）并生产托管验证
+- **UI 组件**：手写落地 shadcn 组件 `input/textarea/label/card/badge/switch/table/dialog/select/sonner`（Radix + Tailwind，源码入库），新增依赖 `@radix-ui/react-{label,dialog,select,switch,tabs}` + `sonner`。
+- **基础设施**：`lib/api.ts`（同源 `/api/*` fetch 客户端 + 全量 TS 类型 + auth/stats/endpoints/accounts 四组 API，`credentials:'include'`）；`lib/auth.tsx`（AuthProvider + `useAuth`，启动查 `/auth/me`）；`components/layout.tsx`（侧边栏导航 + 退出登录）。
+- **页面**：
+  - `Login`：卡片式登录，失败 toast。
+  - `Dashboard`：4 张统计卡（子路径/账号/成功/失败，10s 轮询）+ 最近转发日志表（成功红/失败按中国习惯已用 emerald/destructive 语义 badge）。
+  - `Endpoints`：列表（子路径可点击复制 `/wh/xxx` 接收地址、方法/校验/目标摘要、启停 Switch、编辑/删除）+ `EndpointDialog` 全功能表单（基本信息、任意方法开关、入站解析 source/contentType/字段映射、HMAC 验签配置、**渠道自适应**转发目标编辑器：email=账号/收件人/主题正文模板/格式，http=URL/method/bodyExpr/bodyTpl/contentType/超时重试/出站鉴权 none·bearer·basic·hmac；密钥编辑留空=不改）。
+  - `Accounts`：邮箱账号列表 + `AccountDialog`（服务商预设、授权码脱敏、留空不改）。
+- **路由与主题**：`App.tsx` 路由 + `Protected` 鉴权守卫（loading/未登录跳登录）；`main.tsx` 挂 AuthProvider/QueryClient/Toaster，固定 `dark` 主题。
+- **验证**：`web typecheck` ✅、`format` ✅、`lint` ✅（0/0）、`vite build` ✅（458KB/gzip 145KB）；后端 `WEB_ROOT` 托管 dist 生产验证：`/` 返回含 `dark` 的 index.html ✅、SPA 回退 `/endpoints`→200 ✅、JS 资源 `text/javascript` ✅、`/api/health` ✅。
+- **影响**：M5 里程碑 ✅。下一步 M6 部署。
 
 ### 2026-07-19 15:30 — 完成后端 M2–M4（持久化/接收/转发全链路）并端到端验证
 - **决策（偏离设计文档 §5.5）**：M2 持久化未采用 Drizzle ORM，改为**手写 DAL**——统一 `Repos` 接口（accounts/endpoints/logs）+ SQLite（`bun:sqlite`）与 PostgreSQL（`postgres.js`）两套实现，业务层只依赖接口、与方言解耦。理由：应用规模小，手写 DAL 依赖更少、风险更低、类型完全可控；此为工程取舍，用户如需仍可切回 Drizzle。
