@@ -49,6 +49,11 @@
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
 
+### 2026-07-19 14:35 — 初始化 Git 并完成首提交
+- **决策**：用户要求初始化 git 并提交当前这一轮工作。已 `git init -b main`，修复 `.gitignore` 中**行内尾随注释导致忽略规则失效**的问题（git 不支持尾随注释，已改为整行注释），重新暂存后确认 `.workbuddy/`、`.idea/`、`.vscode/`、`.cursor/` 等被正确忽略。
+- **首次提交**：`d756297` — "chore: 初始化 Bun workspace 项目骨架 (M1) + 设计文档与进度文档"，包含 `docs/`（设计文档/架构图/进度文档）、根 workspace 配置、`.gitignore`、`packages/shared`、`server`、`web` 与 `bun.lock`；工作树干净。
+- **影响**：仓库现已纳入版本控制；里程碑状态不变。
+
 ### 2026-07-19 14:33 — .gitignore 补充忽略项
 - **决策**：用户要求 `.gitignore` 排除更多目录：我的工作目录 `.workbuddy/`、常见 AI 编码助手目录（`.cursor`/`.cline`/`.windsurf`/`.roo`/`.claude`/`.augment`/`.gemini`/`.kiro`/`.aider`/`.continue`/`.trae`/`.marscode`/`.fitten`/`.lingma` 等）、IDE 目录（`.idea`/`.vscode`/`.fleet`）及编辑器临时文件（`*.swo`/`*.swp` 等）。
 - **影响**：更新根 `.gitignore`；里程碑状态不变（M1 仍 ✅）。
