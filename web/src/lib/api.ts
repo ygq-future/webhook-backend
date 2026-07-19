@@ -94,7 +94,14 @@ export type HttpOutAuth =
   | { type: 'none' }
   | { type: 'bearer'; token: string }
   | { type: 'basic'; username: string; password: string }
-  | { type: 'hmac'; header: string; scheme: 'hex' | 'base64' | 'prefix' | 'scheme'; secretRef: string }
+  | {
+      type: 'hmac'
+      header: string
+      scheme: 'hex' | 'base64' | 'prefix' | 'scheme'
+      prefix?: string
+      schemeKeyword?: string
+      secretRef: string
+    }
 
 export interface EmailTarget {
   channel: 'email'

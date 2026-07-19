@@ -37,6 +37,8 @@ interface HttpTargetForm {
   authPass: string
   authHeader: string
   authScheme: 'hex' | 'base64' | 'prefix' | 'scheme'
+  authPrefix: string
+  authSchemeKeyword: string
   authSecret: string
   timeoutMs: number
   retries: number
@@ -57,8 +59,12 @@ interface FormState {
   authType: 'none' | 'hmac'
   hmacHeader: string
   hmacScheme: 'hex' | 'base64' | 'prefix' | 'scheme'
+  hmacPrefix: string
+  hmacSchemeKeyword: string
   hmacSignData: 'raw-body' | 'raw-body+ts' | 'query' | 'header'
   hmacAlgorithm: 'sha256' | 'sha1' | 'sha512'
+  hmacTimestampHeader: string
+  hmacTolerance: number
   hmacSecret: string
   targets: TargetForm[]
 }
@@ -87,6 +93,8 @@ const emptyHttpTarget = (): HttpTargetForm => ({
   authPass: '',
   authHeader: 'X-Signature',
   authScheme: 'hex',
+  authPrefix: '',
+  authSchemeKeyword: '',
   authSecret: '',
   timeoutMs: 10000,
   retries: 3,
@@ -106,8 +114,12 @@ const EMPTY: FormState = {
   authType: 'none',
   hmacHeader: 'X-Signature',
   hmacScheme: 'hex',
+  hmacPrefix: '',
+  hmacSchemeKeyword: '',
   hmacSignData: 'raw-body',
   hmacAlgorithm: 'sha256',
+  hmacTimestampHeader: '',
+  hmacTolerance: 300,
   hmacSecret: '',
   // 默认首个目标改为 HTTP，避免空 email 目标触发后端 400
   targets: [emptyHttpTarget()],
@@ -183,8 +195,12 @@ function toForm(ep: EndpointRow): FormState {
     authType: isHmac ? 'hmac' : 'none',
     hmacHeader: (auth?.header as string) ?? 'X-Signature',
     hmacScheme: (auth?.scheme as FormState['hmacScheme']) ?? 'hex',
+    hmacPrefix: (auth?.prefix as string) ?? '',
+    hmacSchemeKeyword: (auth?.schemeKeyword as string) ?? '',
     hmacSignData: (auth?.signData as FormState['hmacSignData']) ?? 'raw-body',
     hmacAlgorithm: (auth?.algorithm as FormState['hmacAlgorithm']) ?? 'sha256',
+    hmacTimestampHeader: (auth?.timestampHeader as string) ?? '',
+    hmacTolerance: (auth?.tolerance as number) ?? 300,
     hmacSecret: '',
     targets: ep.targets.map(t =>
       t.channel === 'email'
@@ -210,6 +226,8 @@ function toForm(ep: EndpointRow): FormState {
             authPass: t.auth?.type === 'basic' ? t.auth.password : '',
             authHeader: t.auth?.type === 'hmac' ? t.auth.header : 'X-Signature',
             authScheme: t.auth?.type === 'hmac' ? t.auth.scheme : 'hex',
+            authPrefix: t.auth?.type === 'hmac' ? (t.auth.prefix ?? '') : '',
+            authSchemeKeyword: t.auth?.type === 'hmac' ? (t.auth.schemeKeyword ?? '') : '',
             authSecret: '',
             timeoutMs: t.timeoutMs ?? 10000,
             retries: t.retries ?? 3,
@@ -249,6 +267,10 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
       signData: form.hmacSignData,
       algorithm: form.hmacAlgorithm,
     }
+    if (form.hmacPrefix.trim()) auth.prefix = form.hmacPrefix.trim()
+    if (form.hmacSchemeKeyword.trim()) auth.schemeKeyword = form.hmacSchemeKeyword.trim()
+    if (form.hmacTimestampHeader.trim()) auth.timestampHeader = form.hmacTimestampHeader.trim()
+    if (form.hmacTolerance && form.hmacTolerance > 0) auth.tolerance = form.hmacTolerance
     if (form.hmacSecret.trim() || !editing) auth.secretRef = form.hmacSecret.trim()
   } else {
     auth = { type: 'none' }
@@ -269,7 +291,14 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
     if (t.authType === 'bearer') outAuth = { type: 'bearer', token: t.authToken }
     else if (t.authType === 'basic') outAuth = { type: 'basic', username: t.authUser, password: t.authPass }
     else if (t.authType === 'hmac')
-      outAuth = { type: 'hmac', header: t.authHeader, scheme: t.authScheme, secretRef: t.authSecret }
+      outAuth = {
+        type: 'hmac',
+        header: t.authHeader,
+        scheme: t.authScheme,
+        secretRef: t.authSecret,
+        ...(t.authPrefix.trim() ? { prefix: t.authPrefix.trim() } : {}),
+        ...(t.authSchemeKeyword.trim() ? { schemeKeyword: t.authSchemeKeyword.trim() } : {}),
+      }
     const headers = parseHeaders(t.headers)
     return {
       channel: 'http',
@@ -528,7 +557,15 @@ export function EndpointDialog({
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>签名请求头</Label>
-                    <Input value={form.hmacHeader} onChange={e => set('hmacHeader', e.target.value)} />
+                    <Input
+                      value={form.hmacHeader}
+                      onChange={e => set('hmacHeader', e.target.value)}
+                      placeholder="X-Signature"
+                    />
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      对方携带签名的请求头名（如 <code className="rounded bg-white/10 px-1">X-Signature</code>
+                      ）。服务端读取该头的值与本地计算值做恒定时间比较。
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>编码方案</Label>
@@ -545,8 +582,36 @@ export function EndpointDialog({
                         <SelectItem value="scheme">scheme（如 HMAC xxx）</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      签名文本的编码方式：<b className="text-foreground">hex</b> 64 位十六进制（默认、最常见）；
+                      <b className="text-foreground">base64</b> base64 编码；
+                      <b className="text-foreground">prefix</b> 前带固定前缀（如{' '}
+                      <code className="rounded bg-white/10 px-1">sha256=</code>，选此后填下方「前缀」）；
+                      <b className="text-foreground">scheme</b> 前带方案关键字（如{' '}
+                      <code className="rounded bg-white/10 px-1">HMAC abc…</code>，选此后填下方「方案关键字」）。
+                    </p>
                   </div>
                 </div>
+                {form.hmacScheme === 'prefix' && (
+                  <div className="space-y-2">
+                    <Label>前缀（prefix）</Label>
+                    <Input
+                      value={form.hmacPrefix}
+                      onChange={e => set('hmacPrefix', e.target.value)}
+                      placeholder="sha256="
+                    />
+                  </div>
+                )}
+                {form.hmacScheme === 'scheme' && (
+                  <div className="space-y-2">
+                    <Label>方案关键字（scheme keyword）</Label>
+                    <Input
+                      value={form.hmacSchemeKeyword}
+                      onChange={e => set('hmacSchemeKeyword', e.target.value)}
+                      placeholder="HMAC 或 Bearer"
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>被签名数据</Label>
@@ -563,6 +628,16 @@ export function EndpointDialog({
                         <SelectItem value="header">header</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      用什么内容计算签名，须与对方发送时完全一致，否则校验失败：
+                      <b className="text-foreground">raw-body</b> 原始请求体（最常见）；
+                      <b className="text-foreground">raw-body+ts</b> 时间戳拼在请求体前（{' '}
+                      <code className="rounded bg-white/10 px-1">{'<ts>.<body>'}</code>
+                      ，选此后填下方「时间戳」启用防重放）；
+                      <b className="text-foreground">query</b> 查询参数按 key 排序拼接（
+                      <code className="rounded bg-white/10 px-1">k=v&amp;…</code>）；
+                      <b className="text-foreground">header</b> 指定请求头的值。
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>算法</Label>
@@ -578,8 +653,31 @@ export function EndpointDialog({
                         <SelectItem value="sha512">sha512</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      HMAC 哈希算法，默认 <b className="text-foreground">sha256</b>，需与对方完全一致。
+                    </p>
                   </div>
                 </div>
+                {form.hmacSignData === 'raw-body+ts' && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>时间戳请求头</Label>
+                      <Input
+                        value={form.hmacTimestampHeader}
+                        onChange={e => set('hmacTimestampHeader', e.target.value)}
+                        placeholder="X-Timestamp"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>容差（秒）</Label>
+                      <Input
+                        type="number"
+                        value={form.hmacTolerance}
+                        onChange={e => set('hmacTolerance', Number(e.target.value) || 300)}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>密钥{editing && <span className="text-muted-foreground">（留空则不修改）</span>}</Label>
                   <Input
@@ -588,6 +686,9 @@ export function EndpointDialog({
                     onChange={e => set('hmacSecret', e.target.value)}
                     placeholder={editing ? '••••••（已配置）' : '共享密钥'}
                   />
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    双方共享的密钥（secret）。服务端以 AES-GCM 加密存储，API 不返回明文。
+                  </p>
                 </div>
               </div>
             )}
@@ -712,6 +813,15 @@ export function EndpointDialog({
                           onChange={e => updateTarget(i, { bodyExpr: e.target.value })}
                           placeholder="body.message"
                         />
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                          可选 dot-path 表达式，从<span className="text-foreground">事件上下文</span>抽取一段子树。
+                          填了之后：① 若下方「Body 模板」也填，抽取结果在模板中以{' '}
+                          <code className="rounded bg-white/10 px-1">{'$'}</code> 引用（对象用{' '}
+                          <code className="rounded bg-white/10 px-1">{'{{$.field}}'}</code>，标量直接用{' '}
+                          <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>）；② 若「Body 模板」留空，则直接发送该子树。
+                          例：<code className="rounded bg-white/10 px-1">body.message</code> /{' '}
+                          <code className="rounded bg-white/10 px-1">data.items[0]</code>。留空则发送整个请求体。
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label>内容类型</Label>
@@ -735,7 +845,11 @@ export function EndpointDialog({
                       取请求体字段，或直接写映射出的变量名（如 <code className="rounded bg-white/10 px-1">text</code>
                       ）。未配置映射时，请求体顶层字段会自动作为变量（如{' '}
                       <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>
-                      直接取 <code className="rounded bg-white/10 px-1">body.message</code>）。留空则发送整个请求体。
+                      直接取 <code className="rounded bg-white/10 px-1">body.message</code>）。                      若上面填了
+                      bodyExpr，其抽取结果可用 <code className="rounded bg-white/10 px-1">{'$'}</code> 引用（对象用{' '}
+                      <code className="rounded bg-white/10 px-1">{'{{$.field}}'}</code>，标量直接用{' '}
+                      <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>
+                      ）。「Body 模板」留空则直接发送原文/抽取子树。
                     </p>
                     <div className="space-y-2">
                       <Label>Body 模板（支持 {'{{变量}}'}）</Label>
@@ -844,31 +958,60 @@ export function EndpointDialog({
                       </div>
                     )}
                     {t.authType === 'hmac' && (
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <Input
-                          value={t.authHeader}
-                          onChange={e => updateTarget(i, { authHeader: e.target.value })}
-                          placeholder="X-Signature"
-                        />
-                        <Select
-                          value={t.authScheme}
-                          onValueChange={v => updateTarget(i, { authScheme: v as HttpTargetForm['authScheme'] })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="hex">hex</SelectItem>
-                            <SelectItem value="base64">base64</SelectItem>
-                            <SelectItem value="prefix">prefix</SelectItem>
-                            <SelectItem value="scheme">scheme</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          type="password"
-                          value={t.authSecret}
-                          onChange={e => updateTarget(i, { authSecret: e.target.value })}
-                          placeholder="密钥"
-                        />
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <Input
+                            value={t.authHeader}
+                            onChange={e => updateTarget(i, { authHeader: e.target.value })}
+                            placeholder="X-Signature"
+                          />
+                          <Select
+                            value={t.authScheme}
+                            onValueChange={v => updateTarget(i, { authScheme: v as HttpTargetForm['authScheme'] })}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="hex">hex</SelectItem>
+                              <SelectItem value="base64">base64</SelectItem>
+                              <SelectItem value="prefix">prefix</SelectItem>
+                              <SelectItem value="scheme">scheme</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="password"
+                            value={t.authSecret}
+                            onChange={e => updateTarget(i, { authSecret: e.target.value })}
+                            placeholder="密钥"
+                          />
+                        </div>
+                        {t.authScheme === 'prefix' && (
+                          <div className="space-y-2">
+                            <Label>前缀</Label>
+                            <Input
+                              value={t.authPrefix}
+                              onChange={e => updateTarget(i, { authPrefix: e.target.value })}
+                              placeholder="sha256="
+                            />
+                          </div>
+                        )}
+                        {t.authScheme === 'scheme' && (
+                          <div className="space-y-2">
+                            <Label>方案关键字</Label>
+                            <Input
+                              value={t.authSchemeKeyword}
+                              onChange={e => updateTarget(i, { authSchemeKeyword: e.target.value })}
+                              placeholder="HMAC 或 Bearer"
+                            />
+                          </div>
+                        )}
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                          出站签名编码：<b className="text-foreground">hex</b> 十六进制 /{' '}
+                          <b className="text-foreground">base64</b> / <b className="text-foreground">prefix</b>
+                          （带前缀，如 <code className="rounded bg-white/10 px-1">sha256=</code>）/{' '}
+                          <b className="text-foreground">scheme</b>（带关键字，如{' '}
+                          <code className="rounded bg-white/10 px-1">HMAC xxx</code>）。需与接收方约定一致。
+                        </p>
                       </div>
                     )}
                   </div>

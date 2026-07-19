@@ -72,7 +72,7 @@ export function previewHttpBody(opts: {
 
     let value: unknown
     if (opts.bodyTpl) {
-      value = renderTemplate(opts.bodyTpl, { ...ctx, extracted })
+      value = renderTemplate(opts.bodyTpl, { ...ctx, $: extracted })
       return { ok: true, output: String(value) }
     }
 

@@ -21,7 +21,7 @@ function buildBody(target: HttpTarget, event: EventObject, ctx: Record<string, u
   const extracted = target.bodyExpr ? getByPath(ctx, target.bodyExpr) : undefined
 
   if (target.bodyTpl) {
-    return renderTemplate(target.bodyTpl, { ...ctx, extracted })
+    return renderTemplate(target.bodyTpl, { ...ctx, $: extracted })
   }
 
   const value = extracted !== undefined ? extracted : (event.body ?? {})
@@ -41,7 +41,13 @@ function buildBody(target: HttpTarget, event: EventObject, ctx: Record<string, u
   return typeof value === 'string' ? value : JSON.stringify(value)
 }
 
-function applyAuth(target: HttpTarget, headers: Record<string, string>, body: string, ctx: Record<string, unknown>) {
+function applyAuth(
+  target: HttpTarget,
+  headers: Record<string, string>,
+  body: string,
+  ctx: Record<string, unknown>,
+  deps: ChannelDeps,
+) {
   const auth = target.auth
   switch (auth.type) {
     case 'bearer':
@@ -50,9 +56,15 @@ function applyAuth(target: HttpTarget, headers: Record<string, string>, body: st
     case 'basic':
       headers['Authorization'] = `Basic ${Buffer.from(`${auth.username}:${auth.password}`).toString('base64')}`
       break
-    case 'hmac':
-      headers[auth.header] = signOutbound(body, auth.secretRef, { scheme: auth.scheme })
+    case 'hmac': {
+      const secret = deps.decrypt(auth.secretRef)
+      headers[auth.header] = signOutbound(body, secret, {
+        scheme: auth.scheme,
+        prefix: auth.prefix,
+        schemeKeyword: auth.schemeKeyword,
+      })
       break
+    }
     case 'none':
     default:
       break
@@ -83,9 +95,9 @@ export class HttpChannel implements ForwardChannel {
     const body = hasBody ? buildBody(target, event, ctx) : undefined
     if (hasBody) {
       headers['Content-Type'] = headers['Content-Type'] ?? CONTENT_TYPES[target.contentType]
-      applyAuth(target, headers, body ?? '', ctx)
+      applyAuth(target, headers, body ?? '', ctx, _deps)
     } else {
-      applyAuth(target, headers, '', ctx)
+      applyAuth(target, headers, '', ctx, _deps)
     }
 
     const attempts = target.retries + 1

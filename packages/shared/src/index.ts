@@ -66,6 +66,8 @@ export const httpOutAuthSchema = z.discriminatedUnion('type', [
     type: z.literal('hmac'),
     header: z.string(),
     scheme: hmacSchemeSchema,
+    prefix: z.string().optional(),
+    schemeKeyword: z.string().optional(),
     secretRef: z.string().min(1),
   }),
 ])
