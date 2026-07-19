@@ -11,7 +11,7 @@
 
 - **包管理 / 运行时**：Bun + Bun Workspace
 - **前端**：Vite 7 + React 19 + TypeScript + Tailwind v4 + shadcn/ui + React Router + TanStack Query
-- **后端**：Bun + Hono +（Drizzle ORM 双方言：bun:sqlite / postgres-js）
+- **后端**：Bun + Hono + 手写 DAL 双方言（`bun:sqlite` / `postgres.js`，统一 `Repos` 接口）+ nodemailer
 - **共享**：`packages/shared`（`@wh/shared`）存放 Zod 4 schema 与共享类型，前后端共用
 - **部署**：Docker 多阶段（oven/bun 镜像）
 

@@ -1,0 +1,34 @@
+# 依赖与构建产物（容器内重新安装/构建）
+node_modules
+**/node_modules
+**/dist
+**/build
+web/dist
+server/dist
+
+# 数据与运行时
+data
+*.db
+*.db-*
+
+# 版本控制与元数据
+.git
+.gitignore
+
+# 工具与 IDE
+.workbuddy
+.cursor
+.idea
+.vscode
+.fleet
+
+# 环境与日志
+.env
+.env.*
+!.env.example
+*.log
+
+# 文档（非运行必需，减小构建上下文）
+docs
+*.md
+!README.md

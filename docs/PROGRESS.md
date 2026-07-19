@@ -11,10 +11,10 @@
 
 | 项 | 状态 |
 |----|------|
-| 当前阶段 | **实现阶段（Implement）** — 前后端 M1–M5 已完成并端到端验证，待推进 M6 部署 |
-| 代码实现 | 🟡 进行中（M1–M5 完成；M6–M7 进行中） |
-| 下一步 | 推进 M6 部署（多阶段 Dockerfile + compose + README），见 [§4 下一步计划](#4-下一步计划) |
-| 最近更新 | 2026-07-19 16:10 |
+| 当前阶段 | **实现阶段（Implement）** — M1–M6 已完成，进入 M7 收尾加固 |
+| 代码实现 | 🟢 接近完成（M1–M6 完成；M7 收尾中） |
+| 下一步 | M7 加固收尾：全量门禁 + 记忆/文档更新 + 最终提交 |
+| 最近更新 | 2026-07-19 16:35 |
 
 ### 交付物清单
 
@@ -38,7 +38,7 @@
 | **M3 子路径与接收** | endpoints CRUD + `ANY /wh/:subpath` 接收 + 接入契约（methods/parser/auth）+ 转发引擎 | ✅ 已完成 |
 | **M4 转发通道** | `ForwardChannel` 抽象 + `EmailChannel` + `HttpChannel`（出站转发）+ 日志；预留 Phone/WS | ✅ 已完成 |
 | **M5 WebUI** | 登录、仪表盘、子路径管理、账号管理页（shadcn/ui） | ✅ 已完成 |
-| **M6 部署** | Dockerfile + compose + 健康检查 + 文档 | ⬜ 未开始 |
+| **M6 部署** | Dockerfile + compose + 健康检查 + 文档 | ✅ 已完成 |
 | **M7 加固** | 限流/重试、签名校验、压测 | ⬜ 未开始 |
 
 图例：⬜ 未开始 ｜ 🟡 进行中 ｜ ✅ 已完成
@@ -48,6 +48,16 @@
 ## 3. 决策日志（Decision Log）
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
+
+### 2026-07-19 16:35 — 完成 M6 部署（Docker 多阶段 + compose + README）
+- **Dockerfile**：多阶段——builder（`oven/bun:1`，先拷贝各包 `package.json` + `bun.lock` 做 `bun install --frozen-lockfile` 以复用缓存，再 `bun run build:web`）；runtime（`oven/bun:1-slim`，仅拷贝 node_modules/packages/server/web/dist/package.json）。**运行时直接 `bun run server/src/index.ts`**（而非打包，规避 nodemailer/postgres 动态 require 打包问题）。`VOLUME /app/data` 持久化 SQLite；`HEALTHCHECK` 用 bun 原生 `fetch` 打 `/api/health`（slim 无 curl）。
+- **docker-compose.yml**：`app` 服务默认 SQLite（命名卷 `wh-data`），端口 3000，安全环境变量用 `${VAR:-default}` 注入；预留（注释）`db`（postgres:16-alpine）+ `DATABASE_URL=postgres://…` + `depends_on` 一键切换。
+- **.dockerignore**：排除 node_modules/dist/data/.git/IDE/AI 工作目录/docs（保留 README），减小构建上下文。
+- **.env.example**：PORT/DATABASE_URL/WEB_ROOT/ENCRYPT_KEY/SESSION_SECRET/ADMIN_* 示例与说明。
+- **README.md**：特性、技术栈、本地开发、Docker 部署、环境变量、API 概览、HMAC 接入示例（openssl）、项目结构、质量门禁。
+- **修正**：`Agents.md` 技术栈把"Drizzle ORM 双方言"更正为"手写 DAL 双方言（bun:sqlite / postgres.js，统一 Repos 接口）"。
+- **验证**：compose YAML 解析 ✅（services=[app]、volumes=[wh-data]）；`format/lint/test(18 pass)/typecheck` 全过。**注**：当前环境无 Docker 守护进程，镜像构建未能本地验证；Dockerfile/compose 遵循 oven/bun 官方多阶段标准写法。
+- **影响**：M6 里程碑 ✅。
 
 ### 2026-07-19 16:10 — 完成 M5 WebUI（shadcn/ui 管理台）并生产托管验证
 - **UI 组件**：手写落地 shadcn 组件 `input/textarea/label/card/badge/switch/table/dialog/select/sonner`（Radix + Tailwind，源码入库），新增依赖 `@radix-ui/react-{label,dialog,select,switch,tabs}` + `sonner`。
