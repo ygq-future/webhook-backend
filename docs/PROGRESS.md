@@ -49,6 +49,13 @@
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
 
+### 2026-07-19 19:42 — bodyExpr 抽取变量改名 `$` + HMAC 验签说明与配置补全
+- **`$` 变量**：用户要求把 bodyExpr 抽取结果在模板中的变量名由 `extracted` 简写为 `$`（更直观）。服务端与前端预览均以 `{ ...ctx, $: extracted }` 注入——标量用 `{{$}}`、对象用 `{{$.field}}`。
+- **HMAC UI 说明**：端点对话框为 bodyExpr、HMAC「编码方案」「被签名数据」、时间戳防重放补中文说明；并补上此前缺失的配置项：入站 HMAC 的 `prefix`/`schemeKeyword`/`timestampHeader`/`tolerance`，出站 HMAC target 的 `prefix`/`schemeKeyword`。
+- **修复出站 HMAC 用密文签名**：`http.ts` 的 `applyAuth` 原先直接拿加密的 `secretRef` 当密钥签（永远校验不过）；改为 `deps.decrypt(secretRef)` 解密后用明文签，并透传 `prefix`/`schemeKeyword`。
+- **schema 同步**：`packages/shared` 的 `httpOutAuthSchema` 与 `web/src/lib/api.ts` 本地 `HttpOutAuth` 增加 `prefix`/`schemeKeyword` 可选字段。
+- **验证**：e2e 确认 `{{$}}` 正确取标量、`scheme=prefix` 验签 200 / 错签 401；`bun test` 29 全过。提交 `88f1809`。
+
 ### 2026-07-19 18:58 — 修复：无 mapping 时出站模板可直接引用请求体顶层字段
 - **Bug 报告**：用户截图显示，入站 body `{"platform":"qq","message":"adbc","content":"HTTP 测试消息"}`，出站 bodyTpl `{"text":"{{message}}"}`，未配置 mapping 时实际渲染为 `{"text":""}`；必须额外配置 `message->message` 映射才能取到值。
 - **根因**：`eventContext` 仅把 `parser.mapping` 映射出的 `vars` 暴露到顶层模板变量，未把请求体顶层字段作为便捷变量。
