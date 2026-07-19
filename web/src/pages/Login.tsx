@@ -33,7 +33,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center px-6">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="bg-primary/10 mb-2 flex h-11 w-11 items-center justify-center rounded-lg">
+          <div className="neu-pressed mb-2 flex h-12 w-12 items-center justify-center rounded-2xl">
             <Webhook className="text-primary h-6 w-6" />
           </div>
           <CardTitle>Webhook 转发中心</CardTitle>

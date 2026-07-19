@@ -1,48 +1,43 @@
 @import 'tailwindcss';
 
-@custom-variant dark (&:is(.dark *));
-
+/* =============================================================
+ * 浅色 Neumorphism（软 UI）主题
+ * 设计要点：背景与所有"面"（卡片/侧栏/输入/弹层）同色，
+ * 通过双向柔和阴影制造“浮起 / 按下”的立体感，去除生硬描边。
+ * 点缀色：薄荷绿 / Teal（非蓝）。
+ * 阴影由 --neu-shadow-light（左上高光）与 --neu-shadow-dark（右下暗影）组成。
+ * ============================================================= */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-}
+  --radius: 1rem;
 
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
+  /* 同色“面”基准色（极淡薄荷灰，非蓝） */
+  --neu-bg: oklch(0.94 0.006 170);
+  --neu-shadow-light: oklch(1 0 0); /* 纯白高光 */
+  --neu-shadow-dark: oklch(0.83 0.012 170); /* 同色系暗影 */
+
+  --background: var(--neu-bg);
+  --foreground: oklch(0.3 0.02 180); /* 深石板灰文字 */
+  --card: var(--neu-bg);
+  --card-foreground: var(--foreground);
+  --popover: var(--neu-bg);
+  --popover-foreground: var(--foreground);
+
+  /* 强调色：薄荷绿 / Teal */
+  --primary: oklch(0.68 0.13 185);
+  --primary-foreground: oklch(0.99 0.01 185);
+
+  /* 次级 / 静音 / 强调面：均与基准同色，靠阴影区分 */
+  --secondary: var(--neu-bg);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--neu-bg);
+  --muted-foreground: oklch(0.52 0.02 190);
+  --accent: var(--neu-bg);
+  --accent-foreground: var(--foreground);
+
+  --destructive: oklch(0.58 0.2 25); /* 柔和红，用于失败/删除 */
+  --border: oklch(0.82 0.012 170 / 0.5); /* 极淡分隔线，仅表格等辅助位置使用 */
+  --input: var(--neu-bg);
+  --ring: var(--primary);
 }
 
 @theme inline {
@@ -70,11 +65,39 @@
   --color-ring: var(--ring);
 }
 
+/* Neumorphism 工具类（@utility 保证可被 active:/hover: 等变体组合） */
+@utility neu-raised {
+  background-color: var(--neu-bg);
+  box-shadow:
+    8px 8px 16px var(--neu-shadow-dark),
+    -8px -8px 16px var(--neu-shadow-light);
+}
+@utility neu-pressed {
+  background-color: var(--neu-bg);
+  box-shadow:
+    inset 6px 6px 12px var(--neu-shadow-dark),
+    inset -6px -6px 12px var(--neu-shadow-light);
+}
+@utility neu-flat {
+  background-color: var(--neu-bg);
+  box-shadow: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      'Helvetica Neue',
+      'PingFang SC',
+      'Microsoft YaHei',
+      sans-serif;
   }
 }

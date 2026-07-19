@@ -96,7 +96,7 @@ function AccountDialog({
               placeholder="如：通知邮箱"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>服务商</Label>
               <Select
@@ -181,12 +181,12 @@ export default function Accounts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">邮箱账号</h1>
           <p className="text-muted-foreground text-sm">用于 Email 转发通道的发件账号</p>
         </div>
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} className="w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           新增账号
         </Button>

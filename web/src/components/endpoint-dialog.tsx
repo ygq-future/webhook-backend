@@ -295,7 +295,7 @@ export function EndpointDialog({
         <form onSubmit={submit} className="space-y-5">
           {/* 基本信息 */}
           <section className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>
                   子路径 <span className="text-muted-foreground">/wh/…</span>
@@ -335,9 +335,9 @@ export function EndpointDialog({
           </section>
 
           {/* 解析 */}
-          <section className="space-y-3 rounded-lg border p-4">
+          <section className="neu-pressed space-y-3 rounded-2xl p-4">
             <div className="text-sm font-medium">入站解析</div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>取值来源</Label>
                 <Select
@@ -383,7 +383,7 @@ export function EndpointDialog({
                 </Button>
               </div>
               {form.mapping.map((m, i) => (
-                <div key={i} className="flex items-center gap-2">
+                <div key={i} className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[1fr_auto_1fr_auto]">
                   <Input
                     value={m.key}
                     placeholder="text"
@@ -423,14 +423,14 @@ export function EndpointDialog({
           </section>
 
           {/* HMAC 校验 */}
-          <section className="space-y-3 rounded-lg border p-4">
+          <section className="neu-pressed space-y-3 rounded-2xl p-4">
             <label className="flex items-center gap-2 text-sm font-medium">
               <Switch checked={form.authType === 'hmac'} onCheckedChange={v => set('authType', v ? 'hmac' : 'none')} />
               启用 HMAC-SHA-256 验签
             </label>
             {form.authType === 'hmac' && (
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>签名请求头</Label>
                     <Input value={form.hmacHeader} onChange={e => set('hmacHeader', e.target.value)} />
@@ -452,7 +452,7 @@ export function EndpointDialog({
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>被签名数据</Label>
                     <Select
@@ -508,7 +508,7 @@ export function EndpointDialog({
               </Button>
             </div>
             {form.targets.map((t, i) => (
-              <div key={i} className="space-y-3 rounded-lg border p-4">
+              <div key={i} className="neu-pressed space-y-3 rounded-2xl p-4">
                 <div className="flex items-center gap-3">
                   <Select value={t.channel} onValueChange={v => switchChannel(i, v as 'email' | 'http')}>
                     <SelectTrigger className="w-32">
@@ -529,7 +529,7 @@ export function EndpointDialog({
 
                 {t.channel === 'email' ? (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>发件账号</Label>
                         <Select value={t.accountId} onValueChange={v => updateTarget(i, { accountId: v })}>
@@ -577,7 +577,7 @@ export function EndpointDialog({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-[1fr_120px] gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
                       <div className="space-y-2">
                         <Label>目标 URL</Label>
                         <Input
@@ -604,7 +604,7 @@ export function EndpointDialog({
                         </Select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>抽取表达式 bodyExpr（可选）</Label>
                         <Input
@@ -637,7 +637,7 @@ export function EndpointDialog({
                         placeholder='{"text":"{{text}}"}'
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>超时（ms）</Label>
                         <Input
@@ -679,7 +679,7 @@ export function EndpointDialog({
                       />
                     )}
                     {t.authType === 'basic' && (
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <Input
                           value={t.authUser}
                           onChange={e => updateTarget(i, { authUser: e.target.value })}
@@ -694,7 +694,7 @@ export function EndpointDialog({
                       </div>
                     )}
                     {t.authType === 'hmac' && (
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <Input
                           value={t.authHeader}
                           onChange={e => updateTarget(i, { authHeader: e.target.value })}

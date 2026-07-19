@@ -58,12 +58,12 @@ export default function Endpoints() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">子路径</h1>
           <p className="text-muted-foreground text-sm">每个子路径是一个独立的 Webhook 接收端点</p>
         </div>
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} className="w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           新建子路径
         </Button>
