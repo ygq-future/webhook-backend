@@ -52,6 +52,7 @@ interface FormState {
   title: string
   description: string
   active: boolean
+  mode: 'forward' | 'reply'
   anyMethod: boolean
   methods: string
   parserSource: 'body' | 'query' | 'header'
@@ -67,6 +68,9 @@ interface FormState {
   hmacTimestampHeader: string
   hmacTolerance: number
   hmacSecret: string
+  replyStatus: number
+  replyContentType: 'json' | 'text'
+  replyBody: string
   targets: TargetForm[]
 }
 
@@ -108,6 +112,7 @@ const EMPTY: FormState = {
   title: '',
   description: '',
   active: true,
+  mode: 'forward',
   anyMethod: false,
   methods: 'POST',
   parserSource: 'body',
@@ -123,6 +128,9 @@ const EMPTY: FormState = {
   hmacTimestampHeader: '',
   hmacTolerance: 300,
   hmacSecret: '',
+  replyStatus: 200,
+  replyContentType: 'json',
+  replyBody: '{\n  "ok": true\n}',
   // 默认首个目标改为 HTTP，避免空 email 目标触发后端 400
   targets: [emptyHttpTarget()],
 }
@@ -189,6 +197,7 @@ function toForm(ep: EndpointRow): FormState {
     title: ep.title,
     description: ep.description ?? '',
     active: ep.active,
+    mode: ep.mode ?? 'forward',
     anyMethod: ep.methods.includes('*'),
     methods: ep.methods.filter(m => m !== '*').join(',') || 'POST',
     parserSource: (ep.parser?.source ?? 'body') as FormState['parserSource'],
@@ -204,6 +213,9 @@ function toForm(ep: EndpointRow): FormState {
     hmacTimestampHeader: (auth?.timestampHeader as string) ?? '',
     hmacTolerance: (auth?.tolerance as number) ?? 300,
     hmacSecret: '',
+    replyStatus: ep.reply?.status ?? 200,
+    replyContentType: ep.reply?.contentType ?? 'json',
+    replyBody: ep.reply?.body ?? '{\n  "ok": true\n}',
     targets: ep.targets.map(t =>
       t.channel === 'email'
         ? {
@@ -323,10 +335,15 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
     title: form.title,
     description: form.description || undefined,
     active: form.active,
+    mode: form.mode,
     methods,
     parser,
     auth,
-    targets,
+    targets: form.mode === 'forward' ? targets : [],
+    reply:
+      form.mode === 'reply'
+        ? { status: form.replyStatus, contentType: form.replyContentType, body: form.replyBody }
+        : undefined,
   }
 }
 
@@ -382,9 +399,17 @@ export function EndpointDialog({
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.subpath.trim() || !form.title.trim()) return toast.error('请填写子路径与标题')
-    if (form.targets.length === 0) return toast.error('至少配置一个转发目标')
-    const targetErrs = validateTargets(form.targets)
-    if (targetErrs.length) return toast.error('配置有误', { description: targetErrs[0] })
+    if (form.mode === 'forward') {
+      if (form.targets.length === 0) return toast.error('至少配置一个转发目标')
+      const targetErrs = validateTargets(form.targets)
+      if (targetErrs.length) return toast.error('配置有误', { description: targetErrs[0] })
+    } else if (form.replyContentType === 'json') {
+      try {
+        JSON.parse(form.replyBody)
+      } catch {
+        return toast.error('响应 JSON 格式不正确')
+      }
+    }
     if (form.authType === 'hmac' && !editing && !form.hmacSecret.trim()) return toast.error('HMAC 校验需填写密钥')
     mutation.mutate()
   }
@@ -446,6 +471,64 @@ export function EndpointDialog({
               <div className="space-y-2">
                 <Label>允许的方法（逗号分隔）</Label>
                 <Input value={form.methods} onChange={e => set('methods', e.target.value)} placeholder="POST,GET" />
+              </div>
+            )}
+          </section>
+
+          {/* 入站后的动作 */}
+          <section className="glass-soft space-y-3 rounded-2xl p-4">
+            <div className="text-sm font-medium">校验通过后的动作</div>
+            <Select value={form.mode} onValueChange={v => set('mode', v as FormState['mode'])}>
+              <SelectTrigger className="w-full sm:w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="forward">异步转发</SelectItem>
+                <SelectItem value="reply">直接返回自定义响应（心跳）</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.mode === 'reply' && (
+              <div className="space-y-3">
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  请求通过方法和 HMAC 校验后只返回下方内容，不会创建任何出站转发记录。响应体支持{' '}
+                  <code className="rounded bg-white/10 px-1">{'{{变量}}'}</code> 模板。
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>响应状态码</Label>
+                    <Input
+                      type="number"
+                      min={200}
+                      max={599}
+                      value={form.replyStatus}
+                      onChange={e => set('replyStatus', Number(e.target.value) || 200)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>响应类型</Label>
+                    <Select
+                      value={form.replyContentType}
+                      onValueChange={v => set('replyContentType', v as FormState['replyContentType'])}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="json">JSON</SelectItem>
+                        <SelectItem value="text">Text</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>响应体</Label>
+                  <Textarea
+                    value={form.replyBody}
+                    onChange={e => set('replyBody', e.target.value)}
+                    className="font-mono text-xs"
+                    rows={5}
+                    placeholder={form.replyContentType === 'json' ? '{"ok":true}' : 'OK'}
+                  />
+                </div>
               </div>
             )}
           </section>
@@ -698,344 +781,346 @@ export function EndpointDialog({
             )}
           </section>
 
-          {/* 转发目标 */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">转发目标</div>
-              <Button type="button" variant="outline" size="sm" onClick={addTarget}>
-                <Plus className="h-3.5 w-3.5" />
-                添加目标
-              </Button>
-            </div>
-            {form.targets.map((t, i) => (
-              <div key={i} className="glass-soft space-y-3 rounded-2xl p-4">
-                <div className="flex items-center gap-3">
-                  <Select value={t.channel} onValueChange={v => switchChannel(i, v as 'email' | 'http')}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="email">邮件</SelectItem>
-                      <SelectItem value="http">HTTP</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex-1" />
-                  {form.targets.length > 1 && (
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeTarget(i)}>
-                      <Trash2 className="text-destructive h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-
-                {t.channel === 'email' ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>发件账号</Label>
-                        <Select value={t.accountId} onValueChange={v => updateTarget(i, { accountId: v })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="选择账号" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(accounts ?? []).map(a => (
-                              <SelectItem key={a.id} value={String(a.id)}>
-                                {a.name}（{a.email}）
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>收件人</Label>
-                        <Input
-                          value={t.to}
-                          onChange={e => updateTarget(i, { to: e.target.value })}
-                          placeholder="a@b.com,c@d.com"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>邮件主题模板（支持 {'{{变量}}'}）</Label>
-                      <Input value={t.subjectTpl} onChange={e => updateTarget(i, { subjectTpl: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>邮件正文模板（支持 {'{{变量}}'}）</Label>
-                      <p className="text-muted-foreground text-xs leading-relaxed break-words">
-                        未配置映射时，可直接写请求体顶层字段（如{' '}
-                        <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>）
-                        ；已配置映射则优先使用映射变量名。
-                      </p>
-                      <Textarea value={t.bodyTpl} onChange={e => updateTarget(i, { bodyTpl: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>格式</Label>
-                      <Select value={t.format} onValueChange={v => updateTarget(i, { format: v as 'text' | 'html' })}>
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="text">纯文本</SelectItem>
-                          <SelectItem value="html">HTML</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
-                      <div className="space-y-2">
-                        <Label>目标 URL</Label>
-                        <Input
-                          value={t.url}
-                          onChange={e => updateTarget(i, { url: e.target.value })}
-                          placeholder="https://…"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>方法</Label>
-                        <Select
-                          value={t.method}
-                          onValueChange={v => updateTarget(i, { method: v as HttpTargetForm['method'] })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const).map(m => (
-                              <SelectItem key={m} value={m}>
-                                {m}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>代理 Proxy（可选）</Label>
-                      <Input
-                        value={t.proxy}
-                        onChange={e => updateTarget(i, { proxy: e.target.value })}
-                        placeholder="http://127.0.0.1:7890"
-                      />
-                      <p className="text-muted-foreground text-xs leading-relaxed break-words">
-                        出站请求将经由该 HTTP/HTTPS 代理转发（如公司内网出口、网关）。留空则直连；需以{' '}
-                        <code className="rounded bg-white/10 px-1">http(s)://</code> 开头。
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label title="从事件上下文抽取子树作为发送体">抽取表达式 bodyExpr（可选）</Label>
-                        <Input
-                          value={t.bodyExpr}
-                          onChange={e => updateTarget(i, { bodyExpr: e.target.value })}
-                          placeholder="body.message"
-                        />
-                        <p className="text-muted-foreground text-xs leading-relaxed break-words">
-                          可选 dot-path 表达式，从<span className="text-foreground">事件上下文</span>抽取一段子树。
-                          填了之后：① 若下方「Body 模板」也填，抽取结果在模板中以{' '}
-                          <code className="rounded bg-white/10 px-1">{'$'}</code> 引用（对象用{' '}
-                          <code className="rounded bg-white/10 px-1">{'{{$.field}}'}</code>，标量直接用{' '}
-                          <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>）；② 若「Body
-                          模板」留空，则直接发送该子树。 例：
-                          <code className="rounded bg-white/10 px-1">body.message</code> /{' '}
-                          <code className="rounded bg-white/10 px-1">data.items[0]</code>。留空则发送整个请求体。
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>内容类型</Label>
-                        <Select
-                          value={t.contentType}
-                          onValueChange={v => updateTarget(i, { contentType: v as HttpTargetForm['contentType'] })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="json">JSON</SelectItem>
-                            <SelectItem value="form">Form</SelectItem>
-                            <SelectItem value="text">Text</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground text-xs leading-relaxed break-words">
-                      根节点是<span className="text-foreground">事件上下文</span>：
-                      <code className="rounded bg-white/10 px-1">body.xxx</code>
-                      取请求体字段，或直接写映射出的变量名（如 <code className="rounded bg-white/10 px-1">text</code>
-                      ）。未配置映射时，请求体顶层字段会自动作为变量（如{' '}
-                      <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>
-                      直接取 <code className="rounded bg-white/10 px-1">body.message</code>）。 若上面填了
-                      bodyExpr，其抽取结果可用 <code className="rounded bg-white/10 px-1">{'$'}</code> 引用（对象用{' '}
-                      <code className="rounded bg-white/10 px-1">{'{{$.field}}'}</code>，标量直接用{' '}
-                      <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>
-                      ）。「Body 模板」留空则直接发送原文/抽取子树。
-                    </p>
-                    <div className="space-y-2">
-                      <Label>Body 模板（支持 {'{{变量}}'}）</Label>
-                      <JsonEditor
-                        value={t.bodyTpl}
-                        onChange={v => updateTarget(i, { bodyTpl: v })}
-                        tolerant
-                        minHeight="120px"
-                        placeholder='{"text":"{{message}}"}'
-                      />
-                    </div>
-
-                    {/* 试一试：样例数据实时渲染预览 */}
-                    <div className="space-y-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setTryIt(s => ({ ...s, [i]: !s[i] }))}>
-                        <Code2 className="h-3.5 w-3.5" />
-                        {tryIt[i] ? '收起试一试' : '试一试：粘贴样例入站数据预览出站 Body'}
+          {form.mode === 'forward' && (
+            /* 转发目标 */
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">转发目标</div>
+                <Button type="button" variant="outline" size="sm" onClick={addTarget}>
+                  <Plus className="h-3.5 w-3.5" />
+                  添加目标
+                </Button>
+              </div>
+              {form.targets.map((t, i) => (
+                <div key={i} className="glass-soft space-y-3 rounded-2xl p-4">
+                  <div className="flex items-center gap-3">
+                    <Select value={t.channel} onValueChange={v => switchChannel(i, v as 'email' | 'http')}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">邮件</SelectItem>
+                        <SelectItem value="http">HTTP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex-1" />
+                    {form.targets.length > 1 && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeTarget(i)}>
+                        <Trash2 className="text-destructive h-4 w-4" />
                       </Button>
-                      {tryIt[i] && (
-                        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label className="text-xs">样例入站数据（JSON）</Label>
-                            <Textarea
-                              value={t.sampleBody}
-                              onChange={e => updateTarget(i, { sampleBody: e.target.value })}
-                              className="font-mono text-xs"
-                              rows={8}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs">出站 Body 预览</Label>
-                            <TryPreview target={t} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>请求头 Headers（JSON 对象，可选）</Label>
-                      <JsonEditor
-                        value={t.headers}
-                        onChange={v => updateTarget(i, { headers: v })}
-                        minHeight="80px"
-                        placeholder='{"X-Api-Key":"secret"}'
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label>超时（ms）</Label>
-                        <Input
-                          type="number"
-                          value={t.timeoutMs}
-                          onChange={e => updateTarget(i, { timeoutMs: Number(e.target.value) || 10000 })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>重试次数</Label>
-                        <Input
-                          type="number"
-                          value={t.retries}
-                          onChange={e => updateTarget(i, { retries: Number(e.target.value) || 0 })}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>出站鉴权</Label>
-                      <Select
-                        value={t.authType}
-                        onValueChange={v => updateTarget(i, { authType: v as HttpTargetForm['authType'] })}>
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">无</SelectItem>
-                          <SelectItem value="bearer">Bearer Token</SelectItem>
-                          <SelectItem value="basic">Basic Auth</SelectItem>
-                          <SelectItem value="hmac">HMAC 反向签名</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {t.authType === 'bearer' && (
-                      <Input
-                        value={t.authToken}
-                        onChange={e => updateTarget(i, { authToken: e.target.value })}
-                        placeholder="Token"
-                      />
                     )}
-                    {t.authType === 'basic' && (
+                  </div>
+
+                  {t.channel === 'email' ? (
+                    <div className="space-y-3">
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <Input
-                          value={t.authUser}
-                          onChange={e => updateTarget(i, { authUser: e.target.value })}
-                          placeholder="用户名"
-                        />
-                        <Input
-                          type="password"
-                          value={t.authPass}
-                          onChange={e => updateTarget(i, { authPass: e.target.value })}
-                          placeholder="密码"
-                        />
-                      </div>
-                    )}
-                    {t.authType === 'hmac' && (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label>发件账号</Label>
+                          <Select value={t.accountId} onValueChange={v => updateTarget(i, { accountId: v })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择账号" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(accounts ?? []).map(a => (
+                                <SelectItem key={a.id} value={String(a.id)}>
+                                  {a.name}（{a.email}）
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>收件人</Label>
                           <Input
-                            value={t.authHeader}
-                            onChange={e => updateTarget(i, { authHeader: e.target.value })}
-                            placeholder="X-Signature"
+                            value={t.to}
+                            onChange={e => updateTarget(i, { to: e.target.value })}
+                            placeholder="a@b.com,c@d.com"
                           />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>邮件主题模板（支持 {'{{变量}}'}）</Label>
+                        <Input value={t.subjectTpl} onChange={e => updateTarget(i, { subjectTpl: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>邮件正文模板（支持 {'{{变量}}'}）</Label>
+                        <p className="text-muted-foreground text-xs leading-relaxed break-words">
+                          未配置映射时，可直接写请求体顶层字段（如{' '}
+                          <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>）
+                          ；已配置映射则优先使用映射变量名。
+                        </p>
+                        <Textarea value={t.bodyTpl} onChange={e => updateTarget(i, { bodyTpl: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>格式</Label>
+                        <Select value={t.format} onValueChange={v => updateTarget(i, { format: v as 'text' | 'html' })}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">纯文本</SelectItem>
+                            <SelectItem value="html">HTML</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
+                        <div className="space-y-2">
+                          <Label>目标 URL</Label>
+                          <Input
+                            value={t.url}
+                            onChange={e => updateTarget(i, { url: e.target.value })}
+                            placeholder="https://…"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>方法</Label>
                           <Select
-                            value={t.authScheme}
-                            onValueChange={v => updateTarget(i, { authScheme: v as HttpTargetForm['authScheme'] })}>
+                            value={t.method}
+                            onValueChange={v => updateTarget(i, { method: v as HttpTargetForm['method'] })}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="hex">hex</SelectItem>
-                              <SelectItem value="base64">base64</SelectItem>
-                              <SelectItem value="prefix">prefix</SelectItem>
-                              <SelectItem value="scheme">scheme</SelectItem>
+                              {(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const).map(m => (
+                                <SelectItem key={m} value={m}>
+                                  {m}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
-                          <Input
-                            type="password"
-                            value={t.authSecret}
-                            onChange={e => updateTarget(i, { authSecret: e.target.value })}
-                            placeholder="密钥"
-                          />
                         </div>
-                        {t.authScheme === 'prefix' && (
-                          <div className="space-y-2">
-                            <Label>前缀</Label>
-                            <Input
-                              value={t.authPrefix}
-                              onChange={e => updateTarget(i, { authPrefix: e.target.value })}
-                              placeholder="sha256="
-                            />
-                          </div>
-                        )}
-                        {t.authScheme === 'scheme' && (
-                          <div className="space-y-2">
-                            <Label>方案关键字</Label>
-                            <Input
-                              value={t.authSchemeKeyword}
-                              onChange={e => updateTarget(i, { authSchemeKeyword: e.target.value })}
-                              placeholder="HMAC 或 Bearer"
-                            />
-                          </div>
-                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>代理 Proxy（可选）</Label>
+                        <Input
+                          value={t.proxy}
+                          onChange={e => updateTarget(i, { proxy: e.target.value })}
+                          placeholder="http://127.0.0.1:7890"
+                        />
                         <p className="text-muted-foreground text-xs leading-relaxed break-words">
-                          出站签名编码：<b className="text-foreground">hex</b> 十六进制 /{' '}
-                          <b className="text-foreground">base64</b> / <b className="text-foreground">prefix</b>
-                          （带前缀，如 <code className="rounded bg-white/10 px-1">sha256=</code>）/{' '}
-                          <b className="text-foreground">scheme</b>（带关键字，如{' '}
-                          <code className="rounded bg-white/10 px-1">HMAC xxx</code>）。需与接收方约定一致。
+                          出站请求将经由该 HTTP/HTTPS 代理转发（如公司内网出口、网关）。留空则直连；需以{' '}
+                          <code className="rounded bg-white/10 px-1">http(s)://</code> 开头。
                         </p>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </section>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label title="从事件上下文抽取子树作为发送体">抽取表达式 bodyExpr（可选）</Label>
+                          <Input
+                            value={t.bodyExpr}
+                            onChange={e => updateTarget(i, { bodyExpr: e.target.value })}
+                            placeholder="body.message"
+                          />
+                          <p className="text-muted-foreground text-xs leading-relaxed break-words">
+                            可选 dot-path 表达式，从<span className="text-foreground">事件上下文</span>抽取一段子树。
+                            填了之后：① 若下方「Body 模板」也填，抽取结果在模板中以{' '}
+                            <code className="rounded bg-white/10 px-1">{'$'}</code> 引用（对象用{' '}
+                            <code className="rounded bg-white/10 px-1">{'{{$.field}}'}</code>，标量直接用{' '}
+                            <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>）；② 若「Body
+                            模板」留空，则直接发送该子树。 例：
+                            <code className="rounded bg-white/10 px-1">body.message</code> /{' '}
+                            <code className="rounded bg-white/10 px-1">data.items[0]</code>。留空则发送整个请求体。
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>内容类型</Label>
+                          <Select
+                            value={t.contentType}
+                            onValueChange={v => updateTarget(i, { contentType: v as HttpTargetForm['contentType'] })}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="json">JSON</SelectItem>
+                              <SelectItem value="form">Form</SelectItem>
+                              <SelectItem value="text">Text</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground text-xs leading-relaxed break-words">
+                        根节点是<span className="text-foreground">事件上下文</span>：
+                        <code className="rounded bg-white/10 px-1">body.xxx</code>
+                        取请求体字段，或直接写映射出的变量名（如 <code className="rounded bg-white/10 px-1">text</code>
+                        ）。未配置映射时，请求体顶层字段会自动作为变量（如{' '}
+                        <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>
+                        直接取 <code className="rounded bg-white/10 px-1">body.message</code>）。 若上面填了
+                        bodyExpr，其抽取结果可用 <code className="rounded bg-white/10 px-1">{'$'}</code> 引用（对象用{' '}
+                        <code className="rounded bg-white/10 px-1">{'{{$.field}}'}</code>，标量直接用{' '}
+                        <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>
+                        ）。「Body 模板」留空则直接发送原文/抽取子树。
+                      </p>
+                      <div className="space-y-2">
+                        <Label>Body 模板（支持 {'{{变量}}'}）</Label>
+                        <JsonEditor
+                          value={t.bodyTpl}
+                          onChange={v => updateTarget(i, { bodyTpl: v })}
+                          tolerant
+                          minHeight="120px"
+                          placeholder='{"text":"{{message}}"}'
+                        />
+                      </div>
+
+                      {/* 试一试：样例数据实时渲染预览 */}
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setTryIt(s => ({ ...s, [i]: !s[i] }))}>
+                          <Code2 className="h-3.5 w-3.5" />
+                          {tryIt[i] ? '收起试一试' : '试一试：粘贴样例入站数据预览出站 Body'}
+                        </Button>
+                        {tryIt[i] && (
+                          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label className="text-xs">样例入站数据（JSON）</Label>
+                              <Textarea
+                                value={t.sampleBody}
+                                onChange={e => updateTarget(i, { sampleBody: e.target.value })}
+                                className="font-mono text-xs"
+                                rows={8}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs">出站 Body 预览</Label>
+                              <TryPreview target={t} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>请求头 Headers（JSON 对象，可选）</Label>
+                        <JsonEditor
+                          value={t.headers}
+                          onChange={v => updateTarget(i, { headers: v })}
+                          minHeight="80px"
+                          placeholder='{"X-Api-Key":"secret"}'
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>超时（ms）</Label>
+                          <Input
+                            type="number"
+                            value={t.timeoutMs}
+                            onChange={e => updateTarget(i, { timeoutMs: Number(e.target.value) || 10000 })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>重试次数</Label>
+                          <Input
+                            type="number"
+                            value={t.retries}
+                            onChange={e => updateTarget(i, { retries: Number(e.target.value) || 0 })}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>出站鉴权</Label>
+                        <Select
+                          value={t.authType}
+                          onValueChange={v => updateTarget(i, { authType: v as HttpTargetForm['authType'] })}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">无</SelectItem>
+                            <SelectItem value="bearer">Bearer Token</SelectItem>
+                            <SelectItem value="basic">Basic Auth</SelectItem>
+                            <SelectItem value="hmac">HMAC 反向签名</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {t.authType === 'bearer' && (
+                        <Input
+                          value={t.authToken}
+                          onChange={e => updateTarget(i, { authToken: e.target.value })}
+                          placeholder="Token"
+                        />
+                      )}
+                      {t.authType === 'basic' && (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <Input
+                            value={t.authUser}
+                            onChange={e => updateTarget(i, { authUser: e.target.value })}
+                            placeholder="用户名"
+                          />
+                          <Input
+                            type="password"
+                            value={t.authPass}
+                            onChange={e => updateTarget(i, { authPass: e.target.value })}
+                            placeholder="密码"
+                          />
+                        </div>
+                      )}
+                      {t.authType === 'hmac' && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <Input
+                              value={t.authHeader}
+                              onChange={e => updateTarget(i, { authHeader: e.target.value })}
+                              placeholder="X-Signature"
+                            />
+                            <Select
+                              value={t.authScheme}
+                              onValueChange={v => updateTarget(i, { authScheme: v as HttpTargetForm['authScheme'] })}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="hex">hex</SelectItem>
+                                <SelectItem value="base64">base64</SelectItem>
+                                <SelectItem value="prefix">prefix</SelectItem>
+                                <SelectItem value="scheme">scheme</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="password"
+                              value={t.authSecret}
+                              onChange={e => updateTarget(i, { authSecret: e.target.value })}
+                              placeholder="密钥"
+                            />
+                          </div>
+                          {t.authScheme === 'prefix' && (
+                            <div className="space-y-2">
+                              <Label>前缀</Label>
+                              <Input
+                                value={t.authPrefix}
+                                onChange={e => updateTarget(i, { authPrefix: e.target.value })}
+                                placeholder="sha256="
+                              />
+                            </div>
+                          )}
+                          {t.authScheme === 'scheme' && (
+                            <div className="space-y-2">
+                              <Label>方案关键字</Label>
+                              <Input
+                                value={t.authSchemeKeyword}
+                                onChange={e => updateTarget(i, { authSchemeKeyword: e.target.value })}
+                                placeholder="HMAC 或 Bearer"
+                              />
+                            </div>
+                          )}
+                          <p className="text-muted-foreground text-xs leading-relaxed break-words">
+                            出站签名编码：<b className="text-foreground">hex</b> 十六进制 /{' '}
+                            <b className="text-foreground">base64</b> / <b className="text-foreground">prefix</b>
+                            （带前缀，如 <code className="rounded bg-white/10 px-1">sha256=</code>）/{' '}
+                            <b className="text-foreground">scheme</b>（带关键字，如{' '}
+                            <code className="rounded bg-white/10 px-1">HMAC xxx</code>）。需与接收方约定一致。
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </section>
+          )}
 
           {/* 配置 JSON 预览 */}
           <section className="space-y-2">

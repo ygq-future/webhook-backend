@@ -20,6 +20,20 @@ export interface ForwardOutcome {
   detail?: string
 }
 
+/** 记录一次已通过接入校验的入站请求，并返回归一化事件。 */
+export async function recordInboundEvent(endpoint: EndpointRow, input: RawRequestInput, repos: Repos) {
+  const event = buildEvent(input, endpoint.parser ?? undefined)
+  const inboundId = await repos.logs.addInbound({
+    endpointId: endpoint.id,
+    subpath: endpoint.subpath,
+    method: input.method,
+    headers: input.headers,
+    body: input.raw,
+    status: 'received',
+  })
+  return { event, inboundId }
+}
+
 /** 为日志/响应生成目标可读标识（不含敏感信息） */
 function targetLabel(target: ForwardTarget): string {
   switch (target.channel) {
@@ -41,17 +55,7 @@ export async function forwardEvent(
   input: RawRequestInput,
   repos: Repos,
 ): Promise<ForwardOutcome[]> {
-  const event = buildEvent(input, endpoint.parser ?? undefined)
-
-  // 先落「入站日志」（1 条），拿到自增 id 供后续 N 条出站日志关联
-  const inboundId = await repos.logs.addInbound({
-    endpointId: endpoint.id,
-    subpath: endpoint.subpath,
-    method: input.method,
-    headers: input.headers,
-    body: input.raw,
-    status: 'received',
-  })
+  const { event, inboundId } = await recordInboundEvent(endpoint, input, repos)
 
   const deps: ChannelDeps = {
     getAccount: id => repos.accounts.get(id),

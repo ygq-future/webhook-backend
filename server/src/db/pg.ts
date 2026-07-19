@@ -45,10 +45,12 @@ interface RawEndpoint {
   title: string
   description: string | null
   active: boolean
+  mode: 'forward' | 'reply' | null
   methods: string[]
   parser: EndpointRow['parser']
   auth: EndpointRow['auth'] | null
   targets: EndpointRow['targets']
+  reply: EndpointRow['reply']
   created_at: Date
   updated_at: Date
 }
@@ -108,10 +110,12 @@ function mapEndpoint(r: RawEndpoint): EndpointRow {
     title: r.title,
     description: r.description,
     active: r.active,
+    mode: r.mode === 'reply' ? 'reply' : 'forward',
     methods: r.methods,
     parser: r.parser ?? null,
     auth: r.auth ?? { type: 'none' },
     targets: r.targets,
+    reply: r.reply ?? null,
     createdAt: iso(r.created_at),
     updatedAt: iso(r.updated_at),
   }
@@ -181,10 +185,12 @@ export async function createPgRepos(url: string): Promise<Repos> {
       title       TEXT NOT NULL,
       description TEXT,
       active      BOOLEAN NOT NULL DEFAULT TRUE,
+      mode        TEXT NOT NULL DEFAULT 'forward',
       methods     JSONB NOT NULL DEFAULT '["POST"]',
       parser      JSONB,
       auth        JSONB,
       targets     JSONB NOT NULL DEFAULT '[]',
+      reply       JSONB,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
     )`
@@ -211,6 +217,8 @@ export async function createPgRepos(url: string): Promise<Repos> {
   await sql`CREATE INDEX IF NOT EXISTS idx_logs_inbound ON forward_logs(inbound_log_id)`
   // 旧库前向兼容：补齐新列（幂等）
   await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS inbound_log_id INTEGER`
+  await sql`ALTER TABLE endpoints ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'forward'`
+  await sql`ALTER TABLE endpoints ADD COLUMN IF NOT EXISTS reply JSONB`
   await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS request_url TEXT`
   await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS request_method TEXT`
   await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS request_headers JSONB`
@@ -288,26 +296,29 @@ export async function createPgRepos(url: string): Promise<Repos> {
       },
       async create(data: EndpointCreate) {
         const [r] = await sql<RawEndpoint[]>`
-          INSERT INTO endpoints (subpath, title, description, active, methods, parser, auth, targets)
-          VALUES (${data.subpath}, ${data.title}, ${data.description ?? null}, ${data.active},
+          INSERT INTO endpoints (subpath, title, description, active, mode, methods, parser, auth, targets, reply)
+          VALUES (${data.subpath}, ${data.title}, ${data.description ?? null}, ${data.active}, ${data.mode},
                   ${sql.json(data.methods)}, ${data.parser ? sql.json(data.parser) : null},
-                  ${data.auth ? asJson(data.auth) : null}, ${sql.json(data.targets)})
+                  ${data.auth ? asJson(data.auth) : null}, ${sql.json(data.targets)}, ${data.reply ? sql.json(data.reply) : null})
           RETURNING *`
         return mapEndpoint(r)
       },
       async update(id, data: EndpointUpdate) {
         const [cur] = await sql<RawEndpoint[]>`SELECT * FROM endpoints WHERE id = ${id}`
         if (!cur) return null
+        const reply = data.reply !== undefined ? data.reply : cur.reply
         const [r] = await sql<RawEndpoint[]>`
           UPDATE endpoints SET
             subpath=${data.subpath ?? cur.subpath},
             title=${data.title ?? cur.title},
             description=${data.description !== undefined ? data.description : cur.description},
             active=${data.active !== undefined ? data.active : cur.active},
+            mode=${data.mode ?? cur.mode ?? 'forward'},
             methods=${sql.json(data.methods ?? cur.methods)},
             parser=${data.parser !== undefined ? (data.parser ? sql.json(data.parser) : null) : sql.json(cur.parser)},
             auth=${data.auth !== undefined ? (data.auth ? asJson(data.auth) : null) : asJson(cur.auth)},
             targets=${sql.json(data.targets ?? cur.targets)},
+            reply=${reply ? sql.json(reply) : null},
             updated_at=now()
           WHERE id=${id} RETURNING *`
         return mapEndpoint(r)

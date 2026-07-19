@@ -106,23 +106,44 @@ export const forwardTargetSchema = z.discriminatedUnion('channel', [emailTargetS
 export type ForwardTarget = z.infer<typeof forwardTargetSchema>
 
 /* =========================================================
+ * 入站响应模式（reply）：校验请求后直接返回，不进入转发引擎
+ * =======================================================*/
+export const endpointReplySchema = z.object({
+  status: z.number().int().min(200).max(599).default(200),
+  contentType: z.enum(['json', 'text']).default('json'),
+  body: z.string().min(1).default('{"ok":true}'),
+})
+export type EndpointReply = z.infer<typeof endpointReplySchema>
+
+/* =========================================================
  * 子路径端点（Endpoint）
  * 参考设计文档 §7 / endpoints 表
  * =======================================================*/
-export const endpointSchema = z.object({
-  id: z.number().int().positive().optional(),
-  subpath: z.string().regex(/^[a-z0-9-_]+$/, '仅允许小写字母/数字/-/_'),
-  title: z.string().min(1),
-  description: z.string().optional(),
-  active: z.boolean().default(true),
-  /** 允许的方法：["*"] 表示任意 */
-  methods: z.array(z.string()).min(1).default(['POST']),
-  parser: parserSchema.optional(),
-  auth: endpointAuthSchema.default({ type: 'none' }),
-  targets: z.array(forwardTargetSchema).min(1),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-})
+export const endpointSchema = z
+  .object({
+    id: z.number().int().positive().optional(),
+    subpath: z.string().regex(/^[a-z0-9-_]+$/, '仅允许小写字母/数字/-/_'),
+    title: z.string().min(1),
+    description: z.string().optional(),
+    active: z.boolean().default(true),
+    mode: z.enum(['forward', 'reply']).default('forward'),
+    /** 允许的方法：["*"] 表示任意 */
+    methods: z.array(z.string()).min(1).default(['POST']),
+    parser: parserSchema.optional(),
+    auth: endpointAuthSchema.default({ type: 'none' }),
+    targets: z.array(forwardTargetSchema).default([]),
+    reply: endpointReplySchema.optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+  })
+  .superRefine((endpoint, ctx) => {
+    if (endpoint.mode === 'forward' && endpoint.targets.length === 0) {
+      ctx.addIssue({ code: 'custom', path: ['targets'], message: '转发模式至少需要一个转发目标' })
+    }
+    if (endpoint.mode === 'reply' && !endpoint.reply) {
+      ctx.addIssue({ code: 'custom', path: ['reply'], message: '响应模式需要配置响应内容' })
+    }
+  })
 export type Endpoint = z.infer<typeof endpointSchema>
 
 /* =========================================================

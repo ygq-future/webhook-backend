@@ -1,4 +1,4 @@
-import { forwardTargetSchema, parserSchema } from '@wh/shared'
+import { endpointReplySchema, forwardTargetSchema, parserSchema } from '@wh/shared'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { getRepos } from '../db'
@@ -32,16 +32,27 @@ const inputAuthSchema = z.discriminatedUnion('type', [
   }),
 ])
 
-const endpointInputSchema = z.object({
-  subpath: z.string().regex(/^[a-z0-9-_]+$/, '仅允许小写字母/数字/-/_'),
-  title: z.string().min(1),
-  description: z.string().optional(),
-  active: z.boolean().default(true),
-  methods: z.array(z.string()).min(1).default(['POST']),
-  parser: parserSchema.optional(),
-  auth: inputAuthSchema.default({ type: 'none' }),
-  targets: z.array(forwardTargetSchema).min(1),
-})
+const endpointInputSchema = z
+  .object({
+    subpath: z.string().regex(/^[a-z0-9-_]+$/, '仅允许小写字母/数字/-/_'),
+    title: z.string().min(1),
+    description: z.string().optional(),
+    active: z.boolean().default(true),
+    mode: z.enum(['forward', 'reply']).default('forward'),
+    methods: z.array(z.string()).min(1).default(['POST']),
+    parser: parserSchema.optional(),
+    auth: inputAuthSchema.default({ type: 'none' }),
+    targets: z.array(forwardTargetSchema).default([]),
+    reply: endpointReplySchema.optional(),
+  })
+  .superRefine((endpoint, ctx) => {
+    if (endpoint.mode === 'forward' && endpoint.targets.length === 0) {
+      ctx.addIssue({ code: 'custom', path: ['targets'], message: '转发模式至少需要一个转发目标' })
+    }
+    if (endpoint.mode === 'reply' && !endpoint.reply) {
+      ctx.addIssue({ code: 'custom', path: ['reply'], message: '响应模式需要配置响应内容' })
+    }
+  })
 const endpointPatchSchema = endpointInputSchema.partial()
 
 type InputAuth = z.infer<typeof inputAuthSchema>
@@ -101,10 +112,12 @@ endpointsRouter.post('/', async c => {
     title: parsed.data.title,
     description: parsed.data.description ?? null,
     active: parsed.data.active,
+    mode: parsed.data.mode,
     methods: parsed.data.methods,
     parser: parsed.data.parser ?? null,
     auth,
     targets: parsed.data.targets,
+    reply: parsed.data.reply ?? null,
   }
   const created = await repos.endpoints.create(data)
   return c.json(redactEndpoint(created), 201)
@@ -131,9 +144,11 @@ endpointsRouter.put('/:id', async c => {
   if (parsed.data.title !== undefined) patch.title = parsed.data.title
   if (parsed.data.description !== undefined) patch.description = parsed.data.description ?? null
   if (parsed.data.active !== undefined) patch.active = parsed.data.active
+  if (parsed.data.mode !== undefined) patch.mode = parsed.data.mode
   if (parsed.data.methods !== undefined) patch.methods = parsed.data.methods
   if (parsed.data.parser !== undefined) patch.parser = parsed.data.parser ?? null
   if (parsed.data.targets !== undefined) patch.targets = parsed.data.targets
+  if (parsed.data.reply !== undefined) patch.reply = parsed.data.reply ?? null
   if (parsed.data.auth !== undefined) {
     try {
       patch.auth = toStoredAuth(parsed.data.auth, existing.auth)

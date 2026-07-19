@@ -31,10 +31,12 @@ function makeEndpoint(targets: ForwardTarget[]): EndpointRow {
     title: 'test',
     description: null,
     active: true,
+    mode: 'forward',
     methods: ['*'],
     parser: { source: 'body', contentType: 'json', mapping: { text: 'msg' } },
     auth: { type: 'none' },
     targets,
+    reply: null,
     createdAt: '',
     updatedAt: '',
   }

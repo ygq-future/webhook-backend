@@ -75,6 +75,12 @@ export interface Parser {
   mapping?: Record<string, string>
 }
 
+export interface EndpointReply {
+  status: number
+  contentType: 'json' | 'text'
+  body: string
+}
+
 export type EndpointAuth =
   | { type: 'none' }
   | {
@@ -135,10 +141,12 @@ export interface EndpointRow {
   title: string
   description: string | null
   active: boolean
+  mode: 'forward' | 'reply'
   methods: string[]
   parser: Parser | null
   auth: EndpointAuth | Record<string, unknown>
   targets: ForwardTarget[]
+  reply: EndpointReply | null
   createdAt: string
   updatedAt: string
 }

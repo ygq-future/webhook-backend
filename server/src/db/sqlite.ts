@@ -45,10 +45,12 @@ interface RawEndpoint {
   title: string
   description: string | null
   active: number
+  mode: string | null
   methods: string
   parser: string | null
   auth: string | null
   targets: string
+  reply: string | null
   created_at: string
   updated_at: string
 }
@@ -106,10 +108,12 @@ function mapEndpoint(r: RawEndpoint): EndpointRow {
     title: r.title,
     description: r.description,
     active: r.active === 1,
+    mode: r.mode === 'reply' ? 'reply' : 'forward',
     methods: JSON.parse(r.methods),
     parser: r.parser ? JSON.parse(r.parser) : null,
     auth: r.auth ? JSON.parse(r.auth) : { type: 'none' },
     targets: JSON.parse(r.targets),
+    reply: r.reply ? JSON.parse(r.reply) : null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }
@@ -184,10 +188,12 @@ export function createSqliteRepos(filePath: string): Repos {
       title       TEXT NOT NULL,
       description TEXT,
       active      INTEGER NOT NULL DEFAULT 1,
+      mode        TEXT NOT NULL DEFAULT 'forward',
       methods     TEXT NOT NULL DEFAULT '["POST"]',
       parser      TEXT,
       auth        TEXT,
       targets     TEXT NOT NULL DEFAULT '[]',
+      reply       TEXT,
       created_at  TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -218,6 +224,8 @@ export function createSqliteRepos(filePath: string): Repos {
     CREATE INDEX IF NOT EXISTS idx_inbound_created  ON inbound_logs(created_at);
   `)
   addColumnIfMissing(db, 'email_accounts', 'proxy', 'TEXT')
+  addColumnIfMissing(db, 'endpoints', 'mode', "TEXT NOT NULL DEFAULT 'forward'")
+  addColumnIfMissing(db, 'endpoints', 'reply', 'TEXT')
 
   // 旧库前向兼容：为 forward_logs 补齐新列（幂等）
   addColumnIfMissing(db, 'forward_logs', 'inbound_log_id', 'INTEGER')
@@ -301,18 +309,20 @@ export function createSqliteRepos(filePath: string): Repos {
       async create(data: EndpointCreate) {
         const r = db
           .query(
-            `INSERT INTO endpoints (subpath, title, description, active, methods, parser, auth, targets)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+            `INSERT INTO endpoints (subpath, title, description, active, mode, methods, parser, auth, targets, reply)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
           )
           .get(
             data.subpath,
             data.title,
             data.description ?? null,
             data.active ? 1 : 0,
+            data.mode,
             JSON.stringify(data.methods),
             data.parser ? JSON.stringify(data.parser) : null,
             data.auth ? JSON.stringify(data.auth) : null,
             JSON.stringify(data.targets),
+            data.reply ? JSON.stringify(data.reply) : null,
           ) as RawEndpoint
         return mapEndpoint(r)
       },
@@ -321,7 +331,7 @@ export function createSqliteRepos(filePath: string): Repos {
         if (!cur) return null
         const r = db
           .query(
-            `UPDATE endpoints SET subpath=?, title=?, description=?, active=?, methods=?, parser=?, auth=?, targets=?,
+            `UPDATE endpoints SET subpath=?, title=?, description=?, active=?, mode=?, methods=?, parser=?, auth=?, targets=?, reply=?,
              updated_at=datetime('now') WHERE id=? RETURNING *`,
           )
           .get(
@@ -329,10 +339,12 @@ export function createSqliteRepos(filePath: string): Repos {
             data.title ?? cur.title,
             data.description !== undefined ? data.description : cur.description,
             data.active !== undefined ? (data.active ? 1 : 0) : cur.active,
+            data.mode ?? cur.mode ?? 'forward',
             data.methods ? JSON.stringify(data.methods) : cur.methods,
             data.parser !== undefined ? (data.parser ? JSON.stringify(data.parser) : null) : cur.parser,
             data.auth !== undefined ? (data.auth ? JSON.stringify(data.auth) : null) : cur.auth,
             data.targets ? JSON.stringify(data.targets) : cur.targets,
+            data.reply !== undefined ? (data.reply ? JSON.stringify(data.reply) : null) : cur.reply,
             id,
           ) as RawEndpoint
         return mapEndpoint(r)

@@ -103,6 +103,13 @@
 - **日志页**：增加手动刷新按钮，刷新期间显示旋转图标并禁用按钮。
 - **视觉**：重做冷蓝灰玻璃材质，降低白色高光和纯白按钮，增加背景光斑、32px 背景模糊和更克制的内描边。
 
+### 2026-07-19 — 新增心跳响应模式
+
+- **端点模式**：新增 `mode: forward | reply`。`reply` 模式仍执行方法白名单、HMAC 验签并记录入站日志，但不创建转发目标、不调用转发渠道，直接返回配置响应。
+- **响应配置**：支持状态码 `200–599`、`JSON/Text` Content-Type 和模板响应体；JSON 响应会在渲染后再次校验，避免错误配置返回非法 JSON。
+- **兼容性**：SQLite/PostgreSQL 自动补齐 `endpoints.mode` 与 `endpoints.reply` 列，旧端点默认保持 `forward` 行为。
+- **WebUI**：端点编辑器新增“直接返回自定义响应（心跳）”模式，转发模式的目标配置在响应模式下隐藏。
+
 ### 2026-07-19 16:10 — 完成 M5 WebUI（shadcn/ui 管理台）并生产托管验证
 - **UI 组件**：手写落地 shadcn 组件 `input/textarea/label/card/badge/switch/table/dialog/select/sonner`（Radix + Tailwind，源码入库），新增依赖 `@radix-ui/react-{label,dialog,select,switch,tabs}` + `sonner`。
 - **基础设施**：`lib/api.ts`（同源 `/api/*` fetch 客户端 + 全量 TS 类型 + auth/stats/endpoints/accounts 四组 API，`credentials:'include'`）；`lib/auth.tsx`（AuthProvider + `useAuth`，启动查 `/auth/me`）；`components/layout.tsx`（侧边栏导航 + 退出登录）。

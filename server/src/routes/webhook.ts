@@ -3,8 +3,9 @@ import { Hono } from 'hono'
 import { getRepos } from '../db'
 import { decryptSecret } from '../services/crypto'
 import { rateLimit } from '../middleware/rate-limit'
-import { forwardEvent } from '../services/forward-engine'
+import { forwardEvent, recordInboundEvent } from '../services/forward-engine'
 import { verifyInboundHmac } from '../services/hmac'
+import { renderReply } from '../services/reply'
 
 /**
  * 入站 Webhook 接收路由（挂载于 /wh）。
@@ -60,8 +61,24 @@ webhookRouter.all('/:subpath', async c => {
     if (!result.ok) return c.json({ error: 'unauthorized', reason: result.reason }, 401)
   }
 
-  // 立即应答，异步转发（fire-and-forget；进程内事件循环保证 Promise 继续执行）
   const input = { method, raw, headers, query }
+  if (endpoint.mode === 'reply') {
+    try {
+      const { event } = await recordInboundEvent(endpoint, input, repos)
+      const reply = renderReply(endpoint.reply!, event)
+      const status = endpoint.reply!.status
+      const body = [204, 205, 304].includes(status) ? null : reply.body
+      return new Response(body, {
+        status,
+        headers: { 'Content-Type': reply.contentType },
+      })
+    } catch (err) {
+      console.error(`[reply] endpoint#${endpoint.id} (${subpath}) error:`, err)
+      return c.json({ error: 'invalid reply configuration' }, 500)
+    }
+  }
+
+  // 立即应答，异步转发（fire-and-forget；进程内事件循环保证 Promise 继续执行）
   void forwardEvent(endpoint, input, repos).catch(err => {
     console.error(`[forward] endpoint#${endpoint.id} (${subpath}) error:`, err)
   })

@@ -1,4 +1,4 @@
-import type { EndpointAuth, ForwardTarget, Parser } from '@wh/shared'
+import type { EndpointAuth, EndpointReply, ForwardTarget, Parser } from '@wh/shared'
 
 /**
  * 数据访问层（DAL）类型与统一接口
@@ -33,11 +33,13 @@ export interface EndpointRow {
   title: string
   description: string | null
   active: boolean
+  mode: 'forward' | 'reply'
   methods: string[]
   parser: Parser | null
   /** 存储态 auth：hmac 时其 secret 以 secretEnc 字段加密存放 */
   auth: EndpointAuth | Record<string, unknown>
   targets: ForwardTarget[]
+  reply: EndpointReply | null
   createdAt: string
   updatedAt: string
 }

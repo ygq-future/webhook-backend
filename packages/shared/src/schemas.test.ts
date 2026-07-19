@@ -34,3 +34,14 @@ test('forwardTargetSchema: 按 channel 区分联合类型', () => {
   const http = forwardTargetSchema.parse({ channel: 'http', url: 'https://x.com' })
   expect(http.channel).toBe('http')
 })
+
+test('endpointSchema: reply 模式允许无转发目标并要求响应配置', () => {
+  const endpoint = endpointSchema.parse({
+    subpath: 'heartbeat',
+    title: '心跳检查',
+    mode: 'reply',
+    reply: { status: 200, contentType: 'json', body: '{"ok":true}' },
+  })
+  expect(endpoint.targets).toEqual([])
+  expect(endpoint.reply?.status).toBe(200)
+})

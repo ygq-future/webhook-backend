@@ -39,13 +39,16 @@ describe('sqlite repos', () => {
       title: '短信',
       description: null,
       active: true,
+      mode: 'forward',
       methods: ['POST'],
       parser: { source: 'body', contentType: 'json', mapping: { text: 'text' } },
       auth: { type: 'none' },
       targets: [{ channel: 'email', accountId: '1', to: 'me@x.com', subjectTpl: 's', bodyTpl: 'b', format: 'text' }],
+      reply: { status: 200, contentType: 'json', body: '{"ok":true}' },
     })
     expect(ep.methods).toEqual(['POST'])
     expect(ep.targets[0].channel).toBe('email')
+    expect(ep.reply?.status).toBe(200)
 
     const found = await repos.endpoints.getBySubpath('sms-inbox')
     expect(found?.id).toBe(ep.id)
