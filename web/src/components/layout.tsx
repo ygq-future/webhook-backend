@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Webhook, Mail, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Webhook, Mail, ScrollText, LogOut, Menu, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth'
 const NAV = [
   { to: '/', label: '仪表盘', icon: LayoutDashboard, end: true },
   { to: '/endpoints', label: '子路径', icon: Webhook, end: false },
+  { to: '/logs', label: '转发日志', icon: ScrollText, end: false },
   { to: '/accounts', label: '邮箱账号', icon: Mail, end: false },
 ]
 

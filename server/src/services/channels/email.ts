@@ -3,7 +3,7 @@ import type { EmailTarget } from '@wh/shared'
 import type { EventObject } from '../event'
 import { eventContext } from '../event'
 import { renderTemplate } from '../expr'
-import type { ChannelDeps, ForwardChannel, ForwardResult } from './types'
+import type { ChannelDeps, ForwardChannel, ForwardResult, OutboundRequest } from './types'
 
 /**
  * EmailChannel（v1 首实现）：经 SMTP + nodemailer 发送邮件。
@@ -39,6 +39,13 @@ export class EmailChannel implements ForwardChannel {
     const fromName = account.fromName || account.name
     const from = fromName ? `"${fromName}" <${account.email}>` : account.email
 
+    const request: OutboundRequest = {
+      url: `smtp://${account.host}:${account.port}`,
+      method: 'SMTP',
+      headers: { from, to, subject },
+      body: rendered,
+    }
+
     const transport = nodemailer.createTransport({
       host: account.host,
       port: account.port,
@@ -53,9 +60,10 @@ export class EmailChannel implements ForwardChannel {
         subject,
         ...(target.format === 'html' ? { html: rendered } : { text: rendered }),
       })
-      return { ok: true, detail: info.messageId }
+      return { ok: true, detail: info.messageId, request, response: { status: 250, body: info.messageId } }
     } catch (e) {
-      return { ok: false, detail: e instanceof Error ? e.message : String(e) }
+      const msg = e instanceof Error ? e.message : String(e)
+      return { ok: false, detail: msg, request, response: { status: 0, body: msg } }
     } finally {
       transport.close()
     }

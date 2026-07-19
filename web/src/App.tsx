@@ -6,6 +6,7 @@ import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import Endpoints from '@/pages/Endpoints'
 import Accounts from '@/pages/Accounts'
+import Logs from '@/pages/Logs'
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -41,6 +42,14 @@ export default function App() {
         element={
           <Protected>
             <Accounts />
+          </Protected>
+        }
+      />
+      <Route
+        path="/logs"
+        element={
+          <Protected>
+            <Logs />
           </Protected>
         }
       />

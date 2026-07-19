@@ -8,6 +8,10 @@ import type {
   EndpointCreate,
   EndpointRow,
   EndpointUpdate,
+  InboundLogCreate,
+  InboundLogFilter,
+  InboundLogRow,
+  InboundWithOutbound,
   LogCreate,
   LogFilter,
   LogRow,
@@ -51,10 +55,29 @@ interface RawEndpoint {
 interface RawLog {
   id: number
   endpoint_id: number | null
+  inbound_log_id: number | null
   channel: string | null
   target: string | null
+  request_url: string | null
+  request_method: string | null
+  request_headers: string | null
+  request_body: string | null
+  response_status: number | null
+  response_body: string | null
+  duration_ms: number | null
   status: string
   error: string | null
+  created_at: string
+}
+
+interface RawInbound {
+  id: number
+  endpoint_id: number | null
+  subpath: string
+  method: string
+  headers: string | null
+  body: string | null
+  status: string
   created_at: string
 }
 
@@ -94,11 +117,40 @@ function mapLog(r: RawLog): LogRow {
   return {
     id: r.id,
     endpointId: r.endpoint_id,
+    inboundLogId: r.inbound_log_id,
     channel: r.channel,
     target: r.target,
+    requestUrl: r.request_url,
+    requestMethod: r.request_method,
+    requestHeaders: r.request_headers ? JSON.parse(r.request_headers) : null,
+    requestBody: r.request_body,
+    responseStatus: r.response_status,
+    responseBody: r.response_body,
+    durationMs: r.duration_ms,
     status: r.status as 'success' | 'failed',
     error: r.error,
     createdAt: r.created_at,
+  }
+}
+
+function mapInbound(r: RawInbound): InboundLogRow {
+  return {
+    id: r.id,
+    endpointId: r.endpoint_id,
+    subpath: r.subpath,
+    method: r.method,
+    headers: r.headers ? JSON.parse(r.headers) : null,
+    body: r.body,
+    status: r.status as 'received',
+    createdAt: r.created_at,
+  }
+}
+
+/** 幂等补齐列（SQLite 不支持 ADD COLUMN IF NOT EXISTS 的跨版本兼容写法） */
+function addColumnIfMissing(db: Database, table: string, column: string, def: string) {
+  const cols = db.query(`PRAGMA table_info(${table})`).all() as { name: string }[]
+  if (!cols.some(c => c.name === column)) {
+    db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`)
   }
 }
 
@@ -148,7 +200,30 @@ export function createSqliteRepos(filePath: string): Repos {
     );
     CREATE INDEX IF NOT EXISTS idx_logs_endpoint ON forward_logs(endpoint_id);
     CREATE INDEX IF NOT EXISTS idx_logs_created  ON forward_logs(created_at);
+
+    CREATE TABLE IF NOT EXISTS inbound_logs (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      endpoint_id INTEGER,
+      subpath     TEXT NOT NULL,
+      method      TEXT NOT NULL,
+      headers     TEXT,
+      body        TEXT,
+      status      TEXT NOT NULL DEFAULT 'received',
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_inbound_endpoint ON inbound_logs(endpoint_id);
+    CREATE INDEX IF NOT EXISTS idx_inbound_created  ON inbound_logs(created_at);
   `)
+
+  // 旧库前向兼容：为 forward_logs 补齐新列（幂等）
+  addColumnIfMissing(db, 'forward_logs', 'inbound_log_id', 'INTEGER')
+  addColumnIfMissing(db, 'forward_logs', 'request_url', 'TEXT')
+  addColumnIfMissing(db, 'forward_logs', 'request_method', 'TEXT')
+  addColumnIfMissing(db, 'forward_logs', 'request_headers', 'TEXT')
+  addColumnIfMissing(db, 'forward_logs', 'request_body', 'TEXT')
+  addColumnIfMissing(db, 'forward_logs', 'response_status', 'INTEGER')
+  addColumnIfMissing(db, 'forward_logs', 'response_body', 'TEXT')
+  addColumnIfMissing(db, 'forward_logs', 'duration_ms', 'INTEGER')
 
   return {
     accounts: {
@@ -281,13 +356,68 @@ export function createSqliteRepos(filePath: string): Repos {
         ).map(mapLog)
       },
       async add(entry: LogCreate) {
-        db.query(`INSERT INTO forward_logs (endpoint_id, channel, target, status, error) VALUES (?, ?, ?, ?, ?)`).run(
+        db.query(
+          `INSERT INTO forward_logs
+            (endpoint_id, inbound_log_id, channel, target, request_url, request_method, request_headers,
+             request_body, response_status, response_body, duration_ms, status, error)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
           entry.endpointId ?? null,
+          entry.inboundLogId ?? null,
           entry.channel ?? null,
           entry.target ?? null,
+          entry.requestUrl ?? null,
+          entry.requestMethod ?? null,
+          entry.requestHeaders ? JSON.stringify(entry.requestHeaders) : null,
+          entry.requestBody ?? null,
+          entry.responseStatus ?? null,
+          entry.responseBody ?? null,
+          entry.durationMs ?? null,
           entry.status,
           entry.error ?? null,
         )
+      },
+      async addInbound(entry: InboundLogCreate): Promise<number> {
+        const r = db
+          .query(
+            `INSERT INTO inbound_logs (endpoint_id, subpath, method, headers, body, status)
+             VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+          )
+          .get(
+            entry.endpointId ?? null,
+            entry.subpath,
+            entry.method,
+            entry.headers ? JSON.stringify(entry.headers) : null,
+            entry.body ?? null,
+            entry.status,
+          ) as { id: number }
+        return r.id
+      },
+      async listInbound(filter: InboundLogFilter = {}): Promise<InboundWithOutbound[]> {
+        const where: string[] = []
+        const params: (number | string)[] = []
+        if (filter.endpointId !== undefined) {
+          where.push('i.endpoint_id = ?')
+          params.push(filter.endpointId)
+        }
+        const clause = where.length ? `WHERE ${where.join(' AND ')}` : ''
+        const limit = filter.limit ?? 50
+        const inbounds = db
+          .query(`SELECT * FROM inbound_logs i ${clause} ORDER BY i.id DESC LIMIT ?`)
+          .all(...params, limit) as RawInbound[]
+        if (inbounds.length === 0) return []
+        const ids = inbounds.map(r => r.id)
+        const placeholders = ids.map(() => '?').join(',')
+        const outbounds = db
+          .query(`SELECT * FROM forward_logs WHERE inbound_log_id IN (${placeholders}) ORDER BY id ASC`)
+          .all(...ids) as RawLog[]
+        const byInbound = new Map<number, LogRow[]>()
+        for (const o of outbounds) {
+          const key = o.inbound_log_id as number
+          if (!byInbound.has(key)) byInbound.set(key, [])
+          byInbound.get(key)!.push(mapLog(o))
+        }
+        return inbounds.map(i => ({ inbound: mapInbound(i), outbound: byInbound.get(i.id) ?? [] }))
       },
       async stats(): Promise<Stats> {
         const endpoints = (db.query('SELECT COUNT(*) AS n FROM endpoints').get() as { n: number }).n

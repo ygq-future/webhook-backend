@@ -42,22 +42,83 @@ export interface EndpointRow {
 export type EndpointCreate = Omit<EndpointRow, 'id' | 'createdAt' | 'updatedAt'>
 export type EndpointUpdate = Partial<Omit<EndpointRow, 'id' | 'createdAt' | 'updatedAt'>>
 
-/* ---------------- 转发日志 ---------------- */
-export interface LogRow {
+/* ---------------- 入站日志（一次 Webhook 接收 = 一条） ---------------- */
+export interface InboundLogRow {
   id: number
   endpointId: number | null
+  subpath: string
+  method: string
+  /** 入站请求头（小写键对象），存为 JSON 文本 */
+  headers: Record<string, string> | null
+  /** 入站原始请求体 */
+  body: string | null
+  /** 接收状态：received=已接收并进入转发流程 */
+  status: 'received'
+  createdAt: string
+}
+export type InboundLogCreate = Omit<InboundLogRow, 'id' | 'createdAt'>
+
+/* ---------------- 出站日志（一个入站可对应 N 个出站） ---------------- */
+export interface ForwardLogRow {
+  id: number
+  endpointId: number | null
+  /** 关联入站日志（1:N） */
+  inboundLogId: number | null
   channel: string | null
+  /** 出站目标可读标识（不含敏感信息） */
   target: string | null
+  /** 出站请求 */
+  requestUrl: string | null
+  requestMethod: string | null
+  requestHeaders: Record<string, string> | null
+  requestBody: string | null
+  /** 出站响应 */
+  responseStatus: number | null
+  responseBody: string | null
+  durationMs: number | null
   status: 'success' | 'failed'
   error: string | null
   createdAt: string
 }
-export type LogCreate = Omit<LogRow, 'id' | 'createdAt'>
+export type LogRow = ForwardLogRow
+export type LogCreate = Omit<
+  ForwardLogRow,
+  | 'id'
+  | 'createdAt'
+  | 'inboundLogId'
+  | 'requestUrl'
+  | 'requestMethod'
+  | 'requestHeaders'
+  | 'requestBody'
+  | 'responseStatus'
+  | 'responseBody'
+  | 'durationMs'
+> & {
+  inboundLogId?: number | null
+  requestUrl?: string | null
+  requestMethod?: string | null
+  requestHeaders?: Record<string, string> | null
+  requestBody?: string | null
+  responseStatus?: number | null
+  responseBody?: string | null
+  durationMs?: number | null
+}
 
 export interface LogFilter {
   endpointId?: number
   status?: 'success' | 'failed'
   limit?: number
+}
+
+export interface InboundLogFilter {
+  endpointId?: number
+  limit?: number
+}
+
+/** 入站 + 其全部出站（1:N） */
+export interface InboundWithOutbound {
+  inbound: InboundLogRow
+  outbound: ForwardLogRow[]
 }
 
 export interface Stats {
@@ -88,6 +149,10 @@ export interface Repos {
   logs: {
     list(filter?: LogFilter): Promise<LogRow[]>
     add(entry: LogCreate): Promise<void>
+    /** 写入一条入站日志，返回自增 id（供出站日志关联） */
+    addInbound(entry: InboundLogCreate): Promise<number>
+    /** 列出入站日志及其全部出站日志（1:N） */
+    listInbound(filter?: InboundLogFilter): Promise<InboundWithOutbound[]>
     stats(): Promise<Stats>
   }
   close(): Promise<void>

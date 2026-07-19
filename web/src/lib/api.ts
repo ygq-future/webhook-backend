@@ -38,11 +38,35 @@ export interface Stats {
 export interface LogRow {
   id: number
   endpointId: number | null
+  inboundLogId: number | null
   channel: string | null
   target: string | null
+  requestUrl: string | null
+  requestMethod: string | null
+  requestHeaders: Record<string, string> | null
+  requestBody: string | null
+  responseStatus: number | null
+  responseBody: string | null
+  durationMs: number | null
   status: 'success' | 'failed'
   error: string | null
   createdAt: string
+}
+
+export interface InboundLogRow {
+  id: number
+  endpointId: number | null
+  subpath: string
+  method: string
+  headers: Record<string, string> | null
+  body: string | null
+  status: 'received'
+  createdAt: string
+}
+
+export interface InboundWithOutbound {
+  inbound: InboundLogRow
+  outbound: LogRow[]
 }
 
 export interface Parser {
@@ -145,6 +169,14 @@ export const statsApi = {
     if (params?.limit) q.set('limit', String(params.limit))
     const qs = q.toString()
     return request<LogRow[]>(`/stats/logs${qs ? `?${qs}` : ''}`)
+  },
+  /** 入站日志 + 其全部出站日志（1:N） */
+  inbound: (params?: { endpointId?: number; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.endpointId) q.set('endpointId', String(params.endpointId))
+    if (params?.limit) q.set('limit', String(params.limit))
+    const qs = q.toString()
+    return request<InboundWithOutbound[]>(`/stats/inbound${qs ? `?${qs}` : ''}`)
   },
 }
 

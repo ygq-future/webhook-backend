@@ -5,6 +5,10 @@ import type {
   EndpointCreate,
   EndpointRow,
   EndpointUpdate,
+  InboundLogCreate,
+  InboundLogFilter,
+  InboundLogRow,
+  InboundWithOutbound,
   LogCreate,
   LogFilter,
   LogRow,
@@ -51,10 +55,29 @@ interface RawEndpoint {
 interface RawLog {
   id: number
   endpoint_id: number | null
+  inbound_log_id: number | null
   channel: string | null
   target: string | null
+  request_url: string | null
+  request_method: string | null
+  request_headers: Record<string, string> | null
+  request_body: string | null
+  response_status: number | null
+  response_body: string | null
+  duration_ms: number | null
   status: string
   error: string | null
+  created_at: Date
+}
+
+interface RawInbound {
+  id: number
+  endpoint_id: number | null
+  subpath: string
+  method: string
+  headers: Record<string, string> | null
+  body: string | null
+  status: string
   created_at: Date
 }
 
@@ -96,10 +119,31 @@ function mapLog(r: RawLog): LogRow {
   return {
     id: r.id,
     endpointId: r.endpoint_id,
+    inboundLogId: r.inbound_log_id,
     channel: r.channel,
     target: r.target,
+    requestUrl: r.request_url,
+    requestMethod: r.request_method,
+    requestHeaders: r.request_headers,
+    requestBody: r.request_body,
+    responseStatus: r.response_status,
+    responseBody: r.response_body,
+    durationMs: r.duration_ms,
     status: r.status as 'success' | 'failed',
     error: r.error,
+    createdAt: iso(r.created_at),
+  }
+}
+
+function mapInbound(r: RawInbound): InboundLogRow {
+  return {
+    id: r.id,
+    endpointId: r.endpoint_id,
+    subpath: r.subpath,
+    method: r.method,
+    headers: r.headers,
+    body: r.body,
+    status: r.status as 'received',
     createdAt: iso(r.created_at),
   }
 }
@@ -142,16 +186,47 @@ export async function createPgRepos(url: string): Promise<Repos> {
     )`
   await sql`
     CREATE TABLE IF NOT EXISTS forward_logs (
-      id          SERIAL PRIMARY KEY,
-      endpoint_id INTEGER,
-      channel     TEXT,
-      target      TEXT,
-      status      TEXT NOT NULL,
-      error       TEXT,
-      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      id              SERIAL PRIMARY KEY,
+      endpoint_id     INTEGER,
+      inbound_log_id  INTEGER,
+      channel         TEXT,
+      target          TEXT,
+      request_url     TEXT,
+      request_method  TEXT,
+      request_headers JSONB,
+      request_body    TEXT,
+      response_status INTEGER,
+      response_body   TEXT,
+      duration_ms     INTEGER,
+      status          TEXT NOT NULL,
+      error           TEXT,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
     )`
   await sql`CREATE INDEX IF NOT EXISTS idx_logs_endpoint ON forward_logs(endpoint_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_logs_created ON forward_logs(created_at)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_logs_inbound ON forward_logs(inbound_log_id)`
+  // 旧库前向兼容：补齐新列（幂等）
+  await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS inbound_log_id INTEGER`
+  await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS request_url TEXT`
+  await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS request_method TEXT`
+  await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS request_headers JSONB`
+  await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS request_body TEXT`
+  await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS response_status INTEGER`
+  await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS response_body TEXT`
+  await sql`ALTER TABLE forward_logs ADD COLUMN IF NOT EXISTS duration_ms INTEGER`
+  await sql`
+    CREATE TABLE IF NOT EXISTS inbound_logs (
+      id          SERIAL PRIMARY KEY,
+      endpoint_id INTEGER,
+      subpath     TEXT NOT NULL,
+      method      TEXT NOT NULL,
+      headers     JSONB,
+      body        TEXT,
+      status      TEXT NOT NULL DEFAULT 'received',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`
+  await sql`CREATE INDEX IF NOT EXISTS idx_inbound_endpoint ON inbound_logs(endpoint_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_inbound_created ON inbound_logs(created_at)`
 
   return {
     accounts: {
@@ -250,9 +325,40 @@ export async function createPgRepos(url: string): Promise<Repos> {
       },
       async add(entry: LogCreate) {
         await sql`
-          INSERT INTO forward_logs (endpoint_id, channel, target, status, error)
-          VALUES (${entry.endpointId ?? null}, ${entry.channel ?? null}, ${entry.target ?? null},
+          INSERT INTO forward_logs
+            (endpoint_id, inbound_log_id, channel, target, request_url, request_method, request_headers,
+             request_body, response_status, response_body, duration_ms, status, error)
+          VALUES (${entry.endpointId ?? null}, ${entry.inboundLogId ?? null}, ${entry.channel ?? null},
+                  ${entry.target ?? null}, ${entry.requestUrl ?? null}, ${entry.requestMethod ?? null},
+                  ${entry.requestHeaders ? sql.json(entry.requestHeaders) : null}, ${entry.requestBody ?? null},
+                  ${entry.responseStatus ?? null}, ${entry.responseBody ?? null}, ${entry.durationMs ?? null},
                   ${entry.status}, ${entry.error ?? null})`
+      },
+      async addInbound(entry: InboundLogCreate): Promise<number> {
+        const [r] = await sql<{ id: number }[]>`
+          INSERT INTO inbound_logs (endpoint_id, subpath, method, headers, body, status)
+          VALUES (${entry.endpointId ?? null}, ${entry.subpath}, ${entry.method},
+                  ${entry.headers ? sql.json(entry.headers) : null}, ${entry.body ?? null}, ${entry.status})
+          RETURNING id`
+        return r.id
+      },
+      async listInbound(filter: InboundLogFilter = {}): Promise<InboundWithOutbound[]> {
+        const limit = filter.limit ?? 50
+        const inbounds = await sql<RawInbound[]>`
+          SELECT * FROM inbound_logs
+          WHERE ${filter.endpointId !== undefined ? sql`endpoint_id = ${filter.endpointId}` : sql`TRUE`}
+          ORDER BY id DESC LIMIT ${limit}`
+        if (inbounds.length === 0) return []
+        const ids = inbounds.map(r => r.id)
+        const outbounds = await sql<RawLog[]>`
+          SELECT * FROM forward_logs WHERE inbound_log_id IN ${sql(ids)} ORDER BY id ASC`
+        const byInbound = new Map<number, LogRow[]>()
+        for (const o of outbounds) {
+          const key = o.inbound_log_id as number
+          if (!byInbound.has(key)) byInbound.set(key, [])
+          byInbound.get(key)!.push(mapLog(o))
+        }
+        return inbounds.map(i => ({ inbound: mapInbound(i), outbound: byInbound.get(i.id) ?? [] }))
       },
       async stats(): Promise<Stats> {
         const [{ n: endpoints }] = await sql<{ n: number }[]>`SELECT COUNT(*)::int AS n FROM endpoints`

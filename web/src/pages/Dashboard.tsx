@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Webhook, Mail, CheckCircle2, XCircle } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { statsApi } from '@/lib/api'
 
@@ -33,6 +35,7 @@ function StatCard({
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const { data, isLoading } = useQuery({ queryKey: ['stats'], queryFn: statsApi.get, refetchInterval: 10000 })
 
   return (
@@ -50,9 +53,12 @@ export default function Dashboard() {
       </div>
 
       <Card>
-        <CardHeader>
+        <div className="flex items-center justify-between p-6 pb-2">
           <CardTitle className="text-base">最近转发日志</CardTitle>
-        </CardHeader>
+          <Button variant="outline" size="sm" onClick={() => navigate('/logs')}>
+            查看全部
+          </Button>
+        </div>
         <CardContent>
           <Table>
             <TableHeader>

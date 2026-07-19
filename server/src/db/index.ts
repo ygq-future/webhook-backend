@@ -18,9 +18,10 @@ export async function createRepos(databaseUrl = Bun.env.DATABASE_URL ?? ''): Pro
     return createPgRepos(url)
   }
 
-  // SQLite：支持 sqlite:./path 前缀或裸文件路径；留空取默认
+  // SQLite：支持 sqlite://path、sqlite:path 前缀或裸文件路径；留空取默认
   let file = url
-  if (file.startsWith('sqlite:')) file = file.slice('sqlite:'.length)
+  if (file.startsWith('sqlite://')) file = file.slice('sqlite://'.length)
+  else if (file.startsWith('sqlite:')) file = file.slice('sqlite:'.length)
   if (!file) file = './data/app.db'
   return createSqliteRepos(file)
 }

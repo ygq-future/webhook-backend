@@ -9,9 +9,28 @@ import type { EventObject } from '../event'
  * 因为部分渠道（如 email）需要异步解析账号，合并更简洁。
  */
 
+/** 出站请求快照（用于日志审计） */
+export interface OutboundRequest {
+  url: string
+  method: string
+  headers?: Record<string, string>
+  body?: string
+}
+
+/** 出站响应快照（用于日志审计） */
+export interface OutboundResponse {
+  status?: number
+  body?: string
+  durationMs?: number
+}
+
 export interface ForwardResult {
   ok: boolean
   detail?: string
+  /** 出站请求明细（url/method/headers/body） */
+  request?: OutboundRequest
+  /** 出站响应明细（status/body/耗时） */
+  response?: OutboundResponse
 }
 
 /** 引擎注入给渠道的依赖（账号解析、密钥解密） */

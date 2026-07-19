@@ -3,7 +3,7 @@ import type { EventObject } from '../event'
 import { eventContext } from '../event'
 import { getByPath, renderTemplate, stringify } from '../expr'
 import { signOutbound } from '../hmac'
-import type { ChannelDeps, ForwardChannel, ForwardResult } from './types'
+import type { ChannelDeps, ForwardChannel, ForwardResult, OutboundRequest, OutboundResponse } from './types'
 
 /**
  * HttpChannel（v1 出站 HTTP 转发）：用 dot-path 表达式抽取消息内容，
@@ -90,16 +90,26 @@ export class HttpChannel implements ForwardChannel {
 
     const attempts = target.retries + 1
     let lastErr = ''
+    const request: OutboundRequest = { url, method: target.method, headers, body }
+    let response: OutboundResponse | undefined
     for (let i = 0; i < attempts; i++) {
+      const started = Date.now()
       try {
         const res = await fetchWithTimeout(url, { method: target.method, headers, body }, target.timeoutMs)
-        if (res.ok) return { ok: true, detail: `HTTP ${res.status}` }
+        const respText = await res.text()
+        response = { status: res.status, body: respText.slice(0, 8000), durationMs: Date.now() - started }
+        if (res.ok) return { ok: true, detail: `HTTP ${res.status}`, request, response }
         lastErr = `HTTP ${res.status}`
       } catch (e) {
+        response = {
+          status: undefined,
+          body: e instanceof Error ? e.message : String(e),
+          durationMs: Date.now() - started,
+        }
         lastErr = e instanceof Error ? e.message : String(e)
       }
       if (i < attempts - 1) await new Promise(r => setTimeout(r, 2 ** i * 500))
     }
-    return { ok: false, detail: lastErr }
+    return { ok: false, detail: lastErr, request, response }
   }
 }

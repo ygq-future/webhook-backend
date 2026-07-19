@@ -28,3 +28,15 @@ statsRouter.get('/logs', async c => {
   })
   return c.json(logs)
 })
+
+/** 入站日志及其全部出站日志（1:N），用于「转发日志」页 */
+statsRouter.get('/inbound', async c => {
+  const repos = await getRepos()
+  const endpointId = c.req.query('endpointId')
+  const limit = c.req.query('limit')
+  const data = await repos.logs.listInbound({
+    endpointId: endpointId ? Number(endpointId) : undefined,
+    limit: limit ? Number(limit) : undefined,
+  })
+  return c.json(data)
+})

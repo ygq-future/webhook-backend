@@ -1,7 +1,7 @@
 import type { ForwardTarget } from '@wh/shared'
 import type { EndpointRow, Repos } from '../db/types'
 import { getChannel } from './channels/registry'
-import type { ChannelDeps } from './channels/types'
+import type { ChannelDeps, ForwardResult } from './channels/types'
 import { decryptSecret } from './crypto'
 import { buildEvent, type RawRequestInput } from './event'
 
@@ -43,6 +43,16 @@ export async function forwardEvent(
 ): Promise<ForwardOutcome[]> {
   const event = buildEvent(input, endpoint.parser ?? undefined)
 
+  // 先落「入站日志」（1 条），拿到自增 id 供后续 N 条出站日志关联
+  const inboundId = await repos.logs.addInbound({
+    endpointId: endpoint.id,
+    subpath: endpoint.subpath,
+    method: input.method,
+    headers: input.headers,
+    body: input.raw,
+    status: 'received',
+  })
+
   const deps: ChannelDeps = {
     getAccount: id => repos.accounts.get(id),
     decrypt: decryptSecret,
@@ -54,6 +64,8 @@ export async function forwardEvent(
     const channel = getChannel(target.channel)
     let ok = false
     let detail: string | undefined
+    let request: ForwardResult['request']
+    let response: ForwardResult['response']
 
     if (!channel) {
       detail = `channel "${target.channel}" not registered`
@@ -62,6 +74,8 @@ export async function forwardEvent(
         const result = await channel.deliver(target, event, deps)
         ok = result.ok
         detail = result.detail
+        request = result.request
+        response = result.response
       } catch (e) {
         detail = e instanceof Error ? e.message : String(e)
       }
@@ -70,8 +84,16 @@ export async function forwardEvent(
     const label = targetLabel(target)
     await repos.logs.add({
       endpointId: endpoint.id,
+      inboundLogId: inboundId,
       channel: target.channel,
       target: label,
+      requestUrl: request?.url ?? null,
+      requestMethod: request?.method ?? null,
+      requestHeaders: request?.headers ?? null,
+      requestBody: request?.body ?? null,
+      responseStatus: response?.status ?? null,
+      responseBody: response?.body ?? null,
+      durationMs: response?.durationMs ?? null,
       status: ok ? 'success' : 'failed',
       error: ok ? null : (detail ?? 'unknown error'),
     })
