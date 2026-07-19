@@ -19,9 +19,10 @@ interface FormState {
   email: string
   authCode: string
   fromName: string
+  proxy: string
 }
 
-const EMPTY: FormState = { name: '', provider: 'qq', email: '', authCode: '', fromName: '' }
+const EMPTY: FormState = { name: '', provider: 'qq', email: '', authCode: '', fromName: '', proxy: '' }
 
 const PROVIDER_LABEL: Record<string, string> = { gmail: 'Gmail', qq: 'QQ 邮箱', '163': '163 邮箱' }
 
@@ -47,6 +48,7 @@ function AccountDialog({
               email: editing.email,
               authCode: '',
               fromName: editing.fromName ?? '',
+              proxy: editing.proxy ?? '',
             }
           : EMPTY,
       )
@@ -61,6 +63,8 @@ function AccountDialog({
         email: form.email,
         fromName: form.fromName || undefined,
       }
+      if (editing) payload.proxy = form.proxy.trim() || null
+      else if (form.proxy.trim()) payload.proxy = form.proxy.trim()
       if (form.authCode.trim()) payload.authCode = form.authCode.trim()
       if (editing) return accountsApi.update(editing.id, payload)
       return accountsApi.create(payload)
@@ -95,6 +99,19 @@ function AccountDialog({
               onChange={e => setForm({ ...form, name: e.target.value })}
               placeholder="如：通知邮箱"
             />
+          </div>
+          <div className="space-y-2">
+            <Label>SMTP 代理（可选）</Label>
+            <Input
+              value={form.proxy}
+              onChange={e => setForm({ ...form, proxy: e.target.value })}
+              placeholder="http://host.docker.internal:7890"
+            />
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              仅用于 SMTP 连接，支持 HTTP/HTTPS CONNECT。Docker 中访问宿主机代理通常使用
+              <code className="rounded bg-white/10 px-1">host.docker.internal</code>，不能直接照搬宿主机的
+              <code className="rounded bg-white/10 px-1">127.0.0.1</code>。
+            </p>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
@@ -228,6 +245,7 @@ export default function Accounts() {
                   <TableCell className="text-muted-foreground">
                     {a.host}:{a.port}
                     {a.secure ? ' (SSL)' : ''}
+                    {a.proxy ? <div className="text-xs text-white/50">代理已配置</div> : null}
                   </TableCell>
                   <TableCell>
                     {a.hasSecret ? <Badge variant="success">已配置</Badge> : <Badge variant="secondary">未配置</Badge>}

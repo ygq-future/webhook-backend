@@ -1,51 +1,26 @@
+# 这是“源码目录的上一级目录”用的 compose 模板。
+# 目录结构示例：
+#   parent/
+#   ├─ docker-compose.yml
+#   └─ webhook-backend/
+#      ├─ Dockerfile
+#      ├─ .env
+#      └─ data/
+#
+# 在 parent 目录执行：docker compose up -d --build
 services:
-  # ------------------------------------------------------------------
-  # Webhook 转发中心（默认 SQLite，零外部依赖，开箱即用）
-  # ------------------------------------------------------------------
-  app:
-    build: .
+  webhook-backend:
+    build:
+      context: ./webhook-backend
+      dockerfile: Dockerfile
     image: webhook-backend:latest
     container_name: webhook-backend
     restart: unless-stopped
+    env_file:
+      - ./webhook-backend/.env
     ports:
       - '3000:3000'
-    environment:
-      PORT: '3000'
-      # 默认 SQLite；如需 Postgres，取消下方注释并启用 db 服务
-      DATABASE_URL: 'sqlite:./data/app.db'
-      # DATABASE_URL: 'postgres://wh:wh_password@db:5432/webhook'
-      # —— 安全相关：生产环境务必覆盖以下值 ——
-      ENCRYPT_KEY: '${ENCRYPT_KEY:-change-me-encrypt-key}'
-      SESSION_SECRET: '${SESSION_SECRET:-change-me-session-secret}'
-      ADMIN_USER: '${ADMIN_USER:-admin}'
-      ADMIN_PASSWORD: '${ADMIN_PASSWORD:-admin123}'
-      # 或使用 scrypt 哈希（优先级高于明文）：
-      # ADMIN_PASSWORD_HASH: '${ADMIN_PASSWORD_HASH}'
     volumes:
-      - wh-data:/app/data
-    # depends_on:
-    #   db:
-    #     condition: service_healthy
-
-  # ------------------------------------------------------------------
-  # 可选：PostgreSQL（如需接入，取消本段与上方 DATABASE_URL/depends_on 注释）
-  # ------------------------------------------------------------------
-  # db:
-  #   image: postgres:16-alpine
-  #   container_name: webhook-db
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_USER: wh
-  #     POSTGRES_PASSWORD: wh_password
-  #     POSTGRES_DB: webhook
-  #   volumes:
-  #     - pg-data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ['CMD-SHELL', 'pg_isready -U wh -d webhook']
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-
-volumes:
-  wh-data:
-  # pg-data:
+      - ./webhook-backend/data:/app/data
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'

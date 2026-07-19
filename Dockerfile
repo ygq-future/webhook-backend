@@ -29,16 +29,22 @@ ENV NODE_ENV=production \
     DATABASE_URL=sqlite:./data/app.db \
     WEB_ROOT=./web/dist
 
-# 从构建阶段拷贝依赖、后端源码、共享包与前端产物
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
-COPY --from=builder /app/server ./server
+# 运行时只安装 production 依赖，避免把 Vite/TypeScript 等开发依赖带进镜像。
+COPY package.json bun.lock ./
+COPY packages/shared/package.json packages/shared/
+COPY server/package.json server/
+COPY web/package.json web/
+RUN bun install --frozen-lockfile --production
+
+# 后端以 Bun 直接运行 TS，因此保留 server/shared 源码；前端只保留构建产物。
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/server/src ./server/src
 COPY --from=builder /app/web/dist ./web/dist
-COPY --from=builder /app/package.json ./package.json
 
 # SQLite 数据目录（可挂载卷持久化）
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data && chown -R bun:bun /app
 VOLUME ["/app/data"]
+USER bun
 
 EXPOSE 3000
 

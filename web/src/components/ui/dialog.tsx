@@ -16,7 +16,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60',
+      'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/68 backdrop-blur-[5px]',
       className,
     )}
     {...props}
@@ -33,7 +33,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'glass text-card-foreground fixed top-1/2 left-1/2 z-50 grid max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 gap-4 overflow-x-hidden overflow-y-auto rounded-2xl border-0 p-5 data-[state=closed]:animate-[wh-dialog-out_0.15s_ease-in] data-[state=open]:animate-[wh-dialog-in_0.2s_ease-out_both] sm:w-full sm:p-6',
+        'glass text-card-foreground fixed top-1/2 left-1/2 z-50 grid max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 gap-4 overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-0 p-5 will-change-[opacity,scale,translate] data-[state=closed]:animate-[wh-dialog-out_0.16s_ease-in_forwards] data-[state=open]:animate-[wh-dialog-in_0.24s_cubic-bezier(0.22,1,0.36,1)_both] sm:w-full sm:p-6',
         className,
       )}
       {...props}>

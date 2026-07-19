@@ -90,6 +90,12 @@
 - **验证**：compose YAML 解析 ✅（services=[app]、volumes=[wh-data]）；`format/lint/test(18 pass)/typecheck` 全过。**注**：当前环境无 Docker 守护进程，镜像构建未能本地验证；Dockerfile/compose 遵循 oven/bun 官方多阶段标准写法。
 - **影响**：M6 里程碑 ✅。
 
+### 2026-07-19 — SMTP 代理、Glass UI 与父目录 Compose 调整
+
+- **SMTP 根因与修复**：日志中的 `198.18.0.5:465` 不是 QQ SMTP 的正常地址，结合运行环境存在的代理/DNS fake-IP 行为，不能简单归因于 QQ 凭据错误。邮箱账号新增可选 `proxy` 字段，服务端贯通 SQLite/PostgreSQL 迁移、API 校验和 Nodemailer HTTP/HTTPS CONNECT 代理；Docker 中代理地址应使用 `host.docker.internal`，不能使用容器自身的 `127.0.0.1`。
+- **WebUI**：降低嵌套玻璃层的透明度与模糊半径，增加可见的材质层次；弹窗由会触发布局的 `zoom` 改为 `opacity + scale + translate` 合成层动画，遮罩加入轻量模糊，并尊重 `prefers-reduced-motion`。
+- **Docker**：运行时只安装 production 依赖；`docker-compose.yml` 改为源码父目录模板，使用 `env_file: ./webhook-backend/.env` 和 `./webhook-backend/data:/app/data`，移除 PostgreSQL 配置，服务名改为 `webhook-backend`。
+
 ### 2026-07-19 16:10 — 完成 M5 WebUI（shadcn/ui 管理台）并生产托管验证
 - **UI 组件**：手写落地 shadcn 组件 `input/textarea/label/card/badge/switch/table/dialog/select/sonner`（Radix + Tailwind，源码入库），新增依赖 `@radix-ui/react-{label,dialog,select,switch,tabs}` + `sonner`。
 - **基础设施**：`lib/api.ts`（同源 `/api/*` fetch 客户端 + 全量 TS 类型 + auth/stats/endpoints/accounts 四组 API，`credentials:'include'`）；`lib/auth.tsx`（AuthProvider + `useAuth`，启动查 `/auth/me`）；`components/layout.tsx`（侧边栏导航 + 退出登录）。

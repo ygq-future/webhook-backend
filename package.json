@@ -14,7 +14,7 @@
     "build:server": "bun run --cwd server build",
     "typecheck": "bun run --cwd packages/shared typecheck && bun run --cwd server typecheck && bun run --cwd web typecheck",
     "lint": "eslint .",
-    "format": "prettier --write .",
+    "format": "prettier --write . --ignore-unknown",
     "test": "bun test"
   },
   "devDependencies": {

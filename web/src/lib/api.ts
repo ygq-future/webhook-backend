@@ -153,6 +153,7 @@ export interface AccountRow {
   host: string
   port: number
   secure: boolean
+  proxy: string | null
   createdAt: string
   hasSecret: boolean
 }

@@ -126,6 +126,8 @@ webhook-backend/
 └─ Agents.md            # AI 协作规范（完成前强制流程）
 ```
 
+Docker Compose 模板按“源码目录的上一级目录”设计：将本文件复制到 `webhook-backend/` 的父目录，确保同级存在源码目录和源码目录内的 `.env`，然后执行 `docker compose up -d --build`。容器数据映射到源码目录下的 `data/`，数据库默认使用 SQLite。
+
 ---
 
 ## 🧪 质量门禁

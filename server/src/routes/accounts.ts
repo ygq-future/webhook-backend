@@ -24,11 +24,18 @@ const createSchema = z.object({
   host: z.string().optional(),
   port: z.number().int().positive().optional(),
   secure: z.boolean().optional(),
+  proxy: z
+    .string()
+    .url()
+    .refine(value => ['http:', 'https:'].includes(new URL(value).protocol), '代理仅支持 http:// 或 https://')
+    .optional(),
 })
 
 const updateSchema = createSchema.partial().extend({
   // 更新时授权码留空表示不变
   authCode: z.string().optional(),
+  // 更新时传 null 可清除已配置的代理
+  proxy: createSchema.shape.proxy.nullable(),
 })
 
 /** 出库脱敏：不返回授权码密文，仅标记是否已配置 */
@@ -67,6 +74,7 @@ accountsRouter.post('/', async c => {
     host: parsed.data.host ?? preset.host,
     port: parsed.data.port ?? preset.port,
     secure: parsed.data.secure ?? preset.secure,
+    proxy: parsed.data.proxy ?? null,
   }
   const repos = await getRepos()
   const created = await repos.accounts.create(data)
@@ -91,6 +99,7 @@ accountsRouter.put('/:id', async c => {
   if (parsed.data.host !== undefined) patch.host = parsed.data.host
   if (parsed.data.port !== undefined) patch.port = parsed.data.port
   if (parsed.data.secure !== undefined) patch.secure = parsed.data.secure
+  if (parsed.data.proxy !== undefined) patch.proxy = parsed.data.proxy || null
   if (parsed.data.authCode && parsed.data.authCode.trim()) {
     patch.secretEnc = encryptSecret(parsed.data.authCode)
   }

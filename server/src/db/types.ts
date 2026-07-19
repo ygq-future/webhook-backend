@@ -19,6 +19,8 @@ export interface AccountRow {
   host: string
   port: number
   secure: boolean
+  /** 可选 SMTP 出站代理（HTTP/HTTPS CONNECT） */
+  proxy: string | null
   createdAt: string
 }
 export type AccountCreate = Omit<AccountRow, 'id' | 'createdAt'>

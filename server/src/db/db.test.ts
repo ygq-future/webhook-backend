@@ -15,9 +15,11 @@ describe('sqlite repos', () => {
       host: 'smtp.qq.com',
       port: 465,
       secure: true,
+      proxy: 'http://proxy.example:7890',
     })
     expect(created.id).toBeGreaterThan(0)
     expect(created.secure).toBe(true)
+    expect(created.proxy).toBe('http://proxy.example:7890')
 
     const list = await repos.accounts.list()
     expect(list).toHaveLength(1)

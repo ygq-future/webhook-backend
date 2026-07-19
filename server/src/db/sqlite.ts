@@ -35,6 +35,7 @@ interface RawAccount {
   host: string
   port: number
   secure: number
+  proxy: string | null
   created_at: string
 }
 
@@ -93,6 +94,7 @@ function mapAccount(r: RawAccount): AccountRow {
     host: r.host,
     port: r.port,
     secure: r.secure === 1,
+    proxy: r.proxy,
     createdAt: r.created_at,
   }
 }
@@ -172,6 +174,7 @@ export function createSqliteRepos(filePath: string): Repos {
       host        TEXT NOT NULL,
       port        INTEGER NOT NULL,
       secure      INTEGER NOT NULL DEFAULT 1,
+      proxy       TEXT,
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -214,6 +217,7 @@ export function createSqliteRepos(filePath: string): Repos {
     CREATE INDEX IF NOT EXISTS idx_inbound_endpoint ON inbound_logs(endpoint_id);
     CREATE INDEX IF NOT EXISTS idx_inbound_created  ON inbound_logs(created_at);
   `)
+  addColumnIfMissing(db, 'email_accounts', 'proxy', 'TEXT')
 
   // 旧库前向兼容：为 forward_logs 补齐新列（幂等）
   addColumnIfMissing(db, 'forward_logs', 'inbound_log_id', 'INTEGER')
@@ -237,8 +241,8 @@ export function createSqliteRepos(filePath: string): Repos {
       async create(data: AccountCreate) {
         const r = db
           .query(
-            `INSERT INTO email_accounts (channel, name, provider, email, secret_enc, from_name, host, port, secure)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+            `INSERT INTO email_accounts (channel, name, provider, email, secret_enc, from_name, host, port, secure, proxy)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
           )
           .get(
             data.channel,
@@ -250,6 +254,7 @@ export function createSqliteRepos(filePath: string): Repos {
             data.host,
             data.port,
             data.secure ? 1 : 0,
+            data.proxy ?? null,
           ) as RawAccount
         return mapAccount(r)
       },
@@ -258,7 +263,7 @@ export function createSqliteRepos(filePath: string): Repos {
         if (!cur) return null
         const r = db
           .query(
-            `UPDATE email_accounts SET name=?, provider=?, email=?, secret_enc=?, from_name=?, host=?, port=?, secure=?
+            `UPDATE email_accounts SET name=?, provider=?, email=?, secret_enc=?, from_name=?, host=?, port=?, secure=?, proxy=?
              WHERE id=? RETURNING *`,
           )
           .get(
@@ -270,6 +275,7 @@ export function createSqliteRepos(filePath: string): Repos {
             data.host ?? cur.host,
             data.port ?? cur.port,
             (data.secure ?? cur.secure === 1) ? 1 : 0,
+            data.proxy !== undefined ? data.proxy : cur.proxy,
             id,
           ) as RawAccount
         return mapAccount(r)

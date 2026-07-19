@@ -35,6 +35,7 @@ interface RawAccount {
   host: string
   port: number
   secure: boolean
+  proxy: string | null
   created_at: Date
 }
 
@@ -95,6 +96,7 @@ function mapAccount(r: RawAccount): AccountRow {
     host: r.host,
     port: r.port,
     secure: r.secure,
+    proxy: r.proxy,
     createdAt: iso(r.created_at),
   }
 }
@@ -168,8 +170,10 @@ export async function createPgRepos(url: string): Promise<Repos> {
       host        TEXT NOT NULL,
       port        INTEGER NOT NULL,
       secure      BOOLEAN NOT NULL DEFAULT TRUE,
+      proxy       TEXT,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
     )`
+  await sql`ALTER TABLE email_accounts ADD COLUMN IF NOT EXISTS proxy TEXT`
   await sql`
     CREATE TABLE IF NOT EXISTS endpoints (
       id          SERIAL PRIMARY KEY,
@@ -240,9 +244,9 @@ export async function createPgRepos(url: string): Promise<Repos> {
       },
       async create(data: AccountCreate) {
         const [r] = await sql<RawAccount[]>`
-          INSERT INTO email_accounts (channel, name, provider, email, secret_enc, from_name, host, port, secure)
+          INSERT INTO email_accounts (channel, name, provider, email, secret_enc, from_name, host, port, secure, proxy)
           VALUES (${data.channel}, ${data.name}, ${data.provider}, ${data.email}, ${data.secretEnc},
-                  ${data.fromName ?? null}, ${data.host}, ${data.port}, ${data.secure})
+                  ${data.fromName ?? null}, ${data.host}, ${data.port}, ${data.secure}, ${data.proxy ?? null})
           RETURNING *`
         return mapAccount(r)
       },
@@ -258,7 +262,8 @@ export async function createPgRepos(url: string): Promise<Repos> {
             from_name=${data.fromName ?? cur.from_name},
             host=${data.host ?? cur.host},
             port=${data.port ?? cur.port},
-            secure=${data.secure ?? cur.secure}
+            secure=${data.secure ?? cur.secure},
+            proxy=${data.proxy !== undefined ? data.proxy : cur.proxy}
           WHERE id=${id} RETURNING *`
         return mapAccount(r)
       },

@@ -51,6 +51,7 @@ export class EmailChannel implements ForwardChannel {
       port: account.port,
       secure: account.secure,
       auth: { user: account.email, pass: authCode },
+      ...(account.proxy ? { proxy: account.proxy } : {}),
     })
 
     try {
