@@ -1,0 +1,20 @@
+{
+  "name": "webhook-backend",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "web",
+    "server"
+  ],
+  "scripts": {
+    "dev:web": "bun run --cwd web dev",
+    "dev:server": "bun run --cwd server dev",
+    "build:web": "bun run --cwd web build",
+    "build:server": "bun run --cwd server build",
+    "typecheck": "bun run --cwd packages/shared typecheck && bun run --cwd server typecheck && bun run --cwd web typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

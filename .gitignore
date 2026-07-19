@@ -1,0 +1,56 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+web/dist/
+server/dist/
+
+# data / runtime
+data/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor / IDE temp files
+*.swo
+*.swp
+*~
+*.sublime-workspace
+*.sublime-project
+
+# IDE directories
+.idea/
+.vscode/
+.vscode-test/
+.fleet/
+
+# AI coding assistant working directories
+.workbuddy/
+.codebuddy/
+.cursor/
+.cline/
+.windsurf/
+.roo/
+.claude/
+.augment/
+.gemini/
+.kiro/
+.aider/
+.continue/
+.trae/
+.marscode/
+.fitten/
+.lingma/
+
+# bun lockfile (keep for reproducible installs; uncomment to ignore)
+# bun.lock
