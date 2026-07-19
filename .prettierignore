@@ -1,0 +1,17 @@
+# dependencies & build
+node_modules
+**/dist
+**/build
+**/coverage
+
+# runtime data
+data
+
+# agent / IDE working dirs
+.workbuddy
+
+# lockfile (machine-generated, do not reformat)
+bun.lock
+
+# docs are authored by hand; keep them out of auto-formatting
+docs

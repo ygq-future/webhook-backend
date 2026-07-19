@@ -49,6 +49,17 @@
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
 
+### 2026-07-19 14:38 — 接入 Prettier / ESLint / 测试 + 生成 Agents.md
+- **决策**：用户要求补充代码质量工具链并约束 AI 协作流程。已新增：
+  - **Prettier**：`.prettierrc.json`（用户指定配置：singleQuote/semi:false/trailingComma:all/printWidth:120/tabWidth:2/arrowParens:avoid/endOfLine:lf/bracketSpacing/bracketSameLine）+ 插件 `prettier-plugin-tailwindcss`（自动排序 className）；`.prettierignore` 排除 node_modules/dist/data/.workbuddy/docs/bun.lock。
+  - **ESLint 9 flat config**（`.eslint.config.mjs`）：`@eslint/js` + `typescript-eslint`(recommended) + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh`（仅 tsx）+ `eslint-config-prettier`（置于最后关闭冲突规则）。关闭 `react-refresh/only-export-components`（shadcn button.tsx 导出常量为已知误报）。
+  - **脚本**：`bun lint`(eslint .) / `bun format`(prettier --write .) / `bun test`(bun test)。
+  - **测试**：新增 `packages/shared/src/schemas.test.ts`（Zod schema 冒烟测试，4 用例全过）。
+  - **Agents.md**：AI 协作规范约束——每次功能完成**必须**执行 `bun lint` → `bun format` → `bun test`（与可选 typecheck）并通过后再 `git commit`。
+- **修正**：Tailwind 的 Prettier 插件实际包名是 `prettier-plugin-tailwindcss`（无作用域），`@prettier/plugin-tailwindcss` 在 npm 不存在；已更正。
+- **验证**：`bun install` ✅、`bun run format` ✅、`bun run lint` ✅（0 error/0 warning）、`bun run test` ✅（4 pass）、`bun run typecheck` ✅（shared 需 `@types/bun` + `types:["bun"]` 以解析测试里的 `bun:test`）。
+- **影响**：仓库具备统一格式化/校验/测试准入；里程碑状态不变（仍为 M1 ✅），但工程化基线升级。
+
 ### 2026-07-19 14:35 — 初始化 Git 并完成首提交
 - **决策**：用户要求初始化 git 并提交当前这一轮工作。已 `git init -b main`，修复 `.gitignore` 中**行内尾随注释导致忽略规则失效**的问题（git 不支持尾随注释，已改为整行注释），重新暂存后确认 `.workbuddy/`、`.idea/`、`.vscode/`、`.cursor/` 等被正确忽略。
 - **首次提交**：`d756297` — "chore: 初始化 Bun workspace 项目骨架 (M1) + 设计文档与进度文档"，包含 `docs/`（设计文档/架构图/进度文档）、根 workspace 配置、`.gitignore`、`packages/shared`、`server`、`web` 与 `bun.lock`；工作树干净。

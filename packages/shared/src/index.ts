@@ -37,10 +37,7 @@ export const hmacAuthSchema = z.object({
 })
 export type HmacAuth = z.infer<typeof hmacAuthSchema>
 
-export const endpointAuthSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('none') }),
-  hmacAuthSchema,
-])
+export const endpointAuthSchema = z.discriminatedUnion('type', [z.object({ type: z.literal('none') }), hmacAuthSchema])
 export type EndpointAuth = z.infer<typeof endpointAuthSchema>
 
 /* =========================================================
@@ -101,10 +98,7 @@ export const httpTargetSchema = z.object({
 })
 export type HttpTarget = z.infer<typeof httpTargetSchema>
 
-export const forwardTargetSchema = z.discriminatedUnion('channel', [
-  emailTargetSchema,
-  httpTargetSchema,
-])
+export const forwardTargetSchema = z.discriminatedUnion('channel', [emailTargetSchema, httpTargetSchema])
 export type ForwardTarget = z.infer<typeof forwardTargetSchema>
 
 /* =========================================================

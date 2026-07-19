@@ -2,9 +2,7 @@ import { Hono } from 'hono'
 
 const app = new Hono()
 
-app.get('/api/health', (c) =>
-  c.json({ status: 'ok', ts: new Date().toISOString() }),
-)
+app.get('/api/health', c => c.json({ status: 'ok', ts: new Date().toISOString() }))
 
 // 后续里程碑挂载点（M3 接收 / M5 Admin API）：
 //   app.route('/api', apiRouter)

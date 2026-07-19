@@ -12,9 +12,20 @@
     "dev:server": "bun run --cwd server dev",
     "build:web": "bun run --cwd web build",
     "build:server": "bun run --cwd server build",
-    "typecheck": "bun run --cwd packages/shared typecheck && bun run --cwd server typecheck && bun run --cwd web typecheck"
+    "typecheck": "bun run --cwd packages/shared typecheck && bun run --cwd server typecheck && bun run --cwd web typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "bun test"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "@eslint/js": "^9.18.0",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "prettier": "^3.4.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.21.0"
   }
 }

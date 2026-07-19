@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "verbatimModuleSyntax": false,
-    "types": []
+    "types": ["bun"]
   },
   "include": ["src"]
 }
