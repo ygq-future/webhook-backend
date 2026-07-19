@@ -449,7 +449,7 @@ export function EndpointDialog({
           {/* 解析 */}
           <section className="glass-soft space-y-3 rounded-2xl p-4">
             <div className="text-sm font-medium">入站解析</div>
-            <p className="text-muted-foreground text-xs leading-relaxed">
+            <p className="text-muted-foreground text-xs leading-relaxed break-words">
               把任意来源的入站请求归一为命名变量，供下游转发使用。取值来源=请求体时，
               <span className="text-foreground">根节点就是请求体本身</span>。
             </p>
@@ -535,7 +535,7 @@ export function EndpointDialog({
                   </Button>
                 </div>
               ))}
-              <p className="text-muted-foreground text-xs leading-relaxed">
+              <p className="text-muted-foreground text-xs leading-relaxed break-words">
                 例：对方 POST <code className="rounded bg-white/10 px-1">{'{"message":"hi"}'}</code> ，填
                 <code className="rounded bg-white/10 px-1">message</code> 即可；嵌套
                 <code className="rounded bg-white/10 px-1">a.b.c</code>，数组
@@ -562,7 +562,7 @@ export function EndpointDialog({
                       onChange={e => set('hmacHeader', e.target.value)}
                       placeholder="X-Signature"
                     />
-                    <p className="text-muted-foreground text-xs leading-relaxed">
+                    <p className="text-muted-foreground text-xs leading-relaxed break-words">
                       对方携带签名的请求头名（如 <code className="rounded bg-white/10 px-1">X-Signature</code>
                       ）。服务端读取该头的值与本地计算值做恒定时间比较。
                     </p>
@@ -582,7 +582,7 @@ export function EndpointDialog({
                         <SelectItem value="scheme">scheme（如 HMAC xxx）</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-muted-foreground text-xs leading-relaxed">
+                    <p className="text-muted-foreground text-xs leading-relaxed break-words">
                       签名文本的编码方式：<b className="text-foreground">hex</b> 64 位十六进制（默认、最常见）；
                       <b className="text-foreground">base64</b> base64 编码；
                       <b className="text-foreground">prefix</b> 前带固定前缀（如{' '}
@@ -628,7 +628,7 @@ export function EndpointDialog({
                         <SelectItem value="header">header</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-muted-foreground text-xs leading-relaxed">
+                    <p className="text-muted-foreground text-xs leading-relaxed break-words">
                       用什么内容计算签名，须与对方发送时完全一致，否则校验失败：
                       <b className="text-foreground">raw-body</b> 原始请求体（最常见）；
                       <b className="text-foreground">raw-body+ts</b> 时间戳拼在请求体前（{' '}
@@ -653,7 +653,7 @@ export function EndpointDialog({
                         <SelectItem value="sha512">sha512</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-muted-foreground text-xs leading-relaxed">
+                    <p className="text-muted-foreground text-xs leading-relaxed break-words">
                       HMAC 哈希算法，默认 <b className="text-foreground">sha256</b>，需与对方完全一致。
                     </p>
                   </div>
@@ -686,7 +686,7 @@ export function EndpointDialog({
                     onChange={e => set('hmacSecret', e.target.value)}
                     placeholder={editing ? '••••••（已配置）' : '共享密钥'}
                   />
-                  <p className="text-muted-foreground text-xs leading-relaxed">
+                  <p className="text-muted-foreground text-xs leading-relaxed break-words">
                     双方共享的密钥（secret）。服务端以 AES-GCM 加密存储，API 不返回明文。
                   </p>
                 </div>
@@ -756,7 +756,7 @@ export function EndpointDialog({
                     </div>
                     <div className="space-y-2">
                       <Label>邮件正文模板（支持 {'{{变量}}'}）</Label>
-                      <p className="text-muted-foreground text-xs leading-relaxed">
+                      <p className="text-muted-foreground text-xs leading-relaxed break-words">
                         未配置映射时，可直接写请求体顶层字段（如{' '}
                         <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>）
                         ；已配置映射则优先使用映射变量名。
@@ -813,13 +813,14 @@ export function EndpointDialog({
                           onChange={e => updateTarget(i, { bodyExpr: e.target.value })}
                           placeholder="body.message"
                         />
-                        <p className="text-muted-foreground text-xs leading-relaxed">
+                        <p className="text-muted-foreground text-xs leading-relaxed break-words">
                           可选 dot-path 表达式，从<span className="text-foreground">事件上下文</span>抽取一段子树。
                           填了之后：① 若下方「Body 模板」也填，抽取结果在模板中以{' '}
                           <code className="rounded bg-white/10 px-1">{'$'}</code> 引用（对象用{' '}
                           <code className="rounded bg-white/10 px-1">{'{{$.field}}'}</code>，标量直接用{' '}
-                          <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>）；② 若「Body 模板」留空，则直接发送该子树。
-                          例：<code className="rounded bg-white/10 px-1">body.message</code> /{' '}
+                          <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>）；② 若「Body
+                          模板」留空，则直接发送该子树。 例：
+                          <code className="rounded bg-white/10 px-1">body.message</code> /{' '}
                           <code className="rounded bg-white/10 px-1">data.items[0]</code>。留空则发送整个请求体。
                         </p>
                       </div>
@@ -839,13 +840,13 @@ export function EndpointDialog({
                         </Select>
                       </div>
                     </div>
-                    <p className="text-muted-foreground text-xs leading-relaxed">
+                    <p className="text-muted-foreground text-xs leading-relaxed break-words">
                       根节点是<span className="text-foreground">事件上下文</span>：
                       <code className="rounded bg-white/10 px-1">body.xxx</code>
                       取请求体字段，或直接写映射出的变量名（如 <code className="rounded bg-white/10 px-1">text</code>
                       ）。未配置映射时，请求体顶层字段会自动作为变量（如{' '}
                       <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>
-                      直接取 <code className="rounded bg-white/10 px-1">body.message</code>）。                      若上面填了
+                      直接取 <code className="rounded bg-white/10 px-1">body.message</code>）。 若上面填了
                       bodyExpr，其抽取结果可用 <code className="rounded bg-white/10 px-1">{'$'}</code> 引用（对象用{' '}
                       <code className="rounded bg-white/10 px-1">{'{{$.field}}'}</code>，标量直接用{' '}
                       <code className="rounded bg-white/10 px-1">{'{{$}}'}</code>
@@ -1005,7 +1006,7 @@ export function EndpointDialog({
                             />
                           </div>
                         )}
-                        <p className="text-muted-foreground text-xs leading-relaxed">
+                        <p className="text-muted-foreground text-xs leading-relaxed break-words">
                           出站签名编码：<b className="text-foreground">hex</b> 十六进制 /{' '}
                           <b className="text-foreground">base64</b> / <b className="text-foreground">prefix</b>
                           （带前缀，如 <code className="rounded bg-white/10 px-1">sha256=</code>）/{' '}
