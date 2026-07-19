@@ -62,10 +62,16 @@ export function buildEvent(input: RawRequestInput, parser?: Parser): EventObject
 /**
  * 生成模板/表达式渲染上下文：
  * - 顶层直接暴露命名变量（`{{text}}` → vars.text）
- * - 同时保留 vars / body / headers / query / raw / method 命名空间
+ * - 当未配置 mapping 时，自动把请求体顶层字段作为便捷变量（`{{message}}` → body.message）
+ * - 命名冲突时显式 mapping > 请求体字段，保留 body/headers/query/raw/method/vars 命名空间
  */
 export function eventContext(event: EventObject): Record<string, unknown> {
+  const bodyVars: Record<string, unknown> = {}
+  if (event.body && typeof event.body === 'object' && !Array.isArray(event.body)) {
+    Object.assign(bodyVars, event.body as Record<string, unknown>)
+  }
   return {
+    ...bodyVars,
     ...event.vars,
     vars: event.vars,
     body: event.body,
