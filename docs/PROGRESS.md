@@ -11,10 +11,10 @@
 
 | 项 | 状态 |
 |----|------|
-| 当前阶段 | **实现阶段（Implement）** — M1 脚手架已完成，待推进 M2 起 |
-| 代码实现 | 🟡 进行中（M1 完成；M2–M7 未开始） |
-| 下一步 | 推进 M2 持久化与账号（DAL + 账号 CRUD + 加解密），见 [§4 下一步计划](#4-下一步计划) |
-| 最近更新 | 2026-07-19 14:30 |
+| 当前阶段 | **实现阶段（Implement）** — 后端 M2–M4 已完成并端到端验证，待推进 M5 WebUI |
+| 代码实现 | 🟡 进行中（M1–M4 完成；M5–M7 进行中） |
+| 下一步 | 推进 M5 WebUI（登录/仪表盘/子路径/账号管理，shadcn/ui），见 [§4 下一步计划](#4-下一步计划) |
+| 最近更新 | 2026-07-19 15:30 |
 
 ### 交付物清单
 
@@ -34,10 +34,10 @@
 | 里程碑 | 内容 | 状态 |
 |--------|------|------|
 | **M1 脚手架** | Bun workspace + Vite7/React19 前端 + Hono 后端 + 类型共享 | ✅ 已完成 |
-| **M2 持久化与账号** | DAL（SQLite/Postgres，Drizzle schema）+ 账号 CRUD + 授权码加解密 | ⬜ 未开始 |
-| **M3 子路径与接收** | endpoints CRUD + `ANY /wh/:subpath` 接收 + 接入契约（methods/parser/auth）+ 转发引擎骨架 | ⬜ 未开始 |
-| **M4 转发通道** | `ForwardChannel` 抽象 + `EmailChannel` + `HttpChannel`（出站转发）+ 日志；预留 Phone/WS | ⬜ 未开始 |
-| **M5 WebUI** | 登录、仪表盘、子路径管理、账号管理页（shadcn/ui） | ⬜ 未开始 |
+| **M2 持久化与账号** | DAL（SQLite/Postgres，手写 DAL）+ 账号 CRUD + 授权码加解密 | ✅ 已完成 |
+| **M3 子路径与接收** | endpoints CRUD + `ANY /wh/:subpath` 接收 + 接入契约（methods/parser/auth）+ 转发引擎 | ✅ 已完成 |
+| **M4 转发通道** | `ForwardChannel` 抽象 + `EmailChannel` + `HttpChannel`（出站转发）+ 日志；预留 Phone/WS | ✅ 已完成 |
+| **M5 WebUI** | 登录、仪表盘、子路径管理、账号管理页（shadcn/ui） | 🟡 进行中 |
 | **M6 部署** | Dockerfile + compose + 健康检查 + 文档 | ⬜ 未开始 |
 | **M7 加固** | 限流/重试、签名校验、压测 | ⬜ 未开始 |
 
@@ -48,6 +48,26 @@
 ## 3. 决策日志（Decision Log）
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
+
+### 2026-07-19 15:30 — 完成后端 M2–M4（持久化/接收/转发全链路）并端到端验证
+- **决策（偏离设计文档 §5.5）**：M2 持久化未采用 Drizzle ORM，改为**手写 DAL**——统一 `Repos` 接口（accounts/endpoints/logs）+ SQLite（`bun:sqlite`）与 PostgreSQL（`postgres.js`）两套实现，业务层只依赖接口、与方言解耦。理由：应用规模小，手写 DAL 依赖更少、风险更低、类型完全可控；此为工程取舍，用户如需仍可切回 Drizzle。
+- **M2 完成**：
+  - `services/crypto.ts`：AES-256-GCM 加解密（`iv.tag.ciphertext` base64）、scrypt 口令哈希、`safeEqual` 常量时间比较、`randomToken`；密钥由 `ENCRYPT_KEY` 经 scrypt 派生。
+  - `db/{types,sqlite,pg,index}.ts`：`Repos` 接口 + 双方言实现 + `createRepos(DATABASE_URL)` 工厂（`postgres://` → pg，否则 sqlite，默认 `./data/app.db`）+ 单例。
+  - `db/db.test.ts`：内存 SQLite 冒烟（账号 CRUD + 端点 JSON 往返 + 日志统计）。
+- **M3 完成**：
+  - `services/{expr,event,hmac}.ts`：dot-path 表达式引擎 + `{{var}}` 模板；`buildEvent` 归一（method/raw/body/headers/query/vars）；通用 HMAC 入站验签（hex/base64/prefix/scheme + 防重放 + 常量时间）与出站签名。
+  - `services/forward-engine.ts`：编排 `buildEvent` → 遍历 `targets` → `getChannel` → `deliver` → `repos.logs.add` 落库。
+  - `routes/webhook.ts`：`ANY /wh/:subpath`，方法校验（405）、端点查找（404/410）、HMAC 验签（401），**先回 200 再异步转发**。
+  - `routes/endpoints.ts`：CRUD + toggle，HMAC 密钥加密存储 + 响应脱敏。
+- **M4 完成**：
+  - `services/channels/{types,email,http,phone,ws,registry}.ts`：`ForwardChannel` 抽象；`EmailChannel`（nodemailer + gmail/qq/163 SMTP 预设 + 模板渲染）；`HttpChannel`（dot-path 抽取 + 模板 body + none/bearer/basic/hmac 鉴权 + 超时 + 指数退避重试）；Phone/WS 预留 stub；注册表默认注册 email+http。
+- **鉴权与 Admin API**：`services/session.ts`（签名 Cookie 会话）+ `middleware/auth.ts` + `routes/{auth,accounts,stats}.ts`；`index.ts` 装配全部路由 + 生产静态托管 `web/dist`。
+- **端到端冒烟验证**（临时 sqlite，PORT=3199）：健康检查 ✅、未鉴权 401 ✅、登录/会话/`me` ✅、创建端点（Zod 默认值填充）✅、`ANY /wh/:subpath` 接收 200 ✅、HTTP 转发+重试退避+日志落库 ✅、成功转发路径 ✅、HMAC 无签 401 / 有效签 200 ✅、统计与日志接口 ✅。
+- **测试补强（M7 加固项）**：新增 `expr.test.ts`/`hmac.test.ts`/`forward-engine.test.ts`；全仓 **18 pass / 0 fail**。
+- **工具链修正**：`eslint.config.mjs` 增加 `@typescript-eslint/no-unused-vars` 的 `^_` 忽略模式（用于渠道接口占位参数如 phone/ws 的 `_target/_event/_deps`）。
+- **门禁**：`bun run format` ✅、`bun run lint` ✅（0/0）、`bun test` ✅（18 pass）、server+web `typecheck` ✅。
+- **影响**：M2/M3/M4 里程碑标记 ✅；新增 `server/package.json` 依赖 `nodemailer`/`postgres` + `@types/nodemailer`。下一步 M5 WebUI。
 
 ### 2026-07-19 14:38 — 接入 Prettier / ESLint / 测试 + 生成 Agents.md
 - **决策**：用户要求补充代码质量工具链并约束 AI 协作流程。已新增：
@@ -113,15 +133,14 @@
 
 ## 4. 下一步计划
 
-**待用户确认后**，按里程碑推进，建议从 **M1 脚手架** 开始：
+后端 M1–M4 已完成并端到端验证，下一步推进前端与部署：
 
-1. **M1 — 搭建项目骨架**（下一步）
-   - 初始化 Bun workspace（`web/` + `server/` + 可选 `packages/shared/`）
-   - 前端：Vite 7 + React 19 + TS + Tailwind 4 + shadcn/ui 初始化 + React Router
-   - 后端：Bun + Hono 骨架 + 健康检查 `/api/health`
-   - 前后端共享 Zod schema / 类型
-2. **M2 — 持久化与账号**：Drizzle schema（双方言）+ DAL + 账号 CRUD + AES-GCM/scrypt。
-3. 之后依次 M3 接收与接入契约 → M4 转发通道（Email + Http）→ M5 WebUI → M6 部署 → M7 加固。
+1. **M5 — WebUI**（进行中）
+   - 补齐 shadcn 组件（input/label/card/dialog/select/table/badge/switch/sonner 等）
+   - API 客户端 + 鉴权上下文（登录/登出/me）
+   - 页面：登录、仪表盘（统计+日志）、子路径管理（CRUD+toggle，转发目标按 channel 自适应表单）、邮箱账号管理（SMTP 预设+授权码）
+2. **M6 — 部署**：多阶段 Dockerfile + docker-compose.yml + .dockerignore + README。
+3. **M7 — 加固**：限流/重试打磨、补测试、完整 `install/format/lint/test/typecheck/build`，收尾提交。
 
 ### 开放问题（已全部 resolved）
 - [x] 是否现在开始 M1 脚手架搭建？→ **是**，已于 2026-07-19 14:30 完成 M1（见决策日志）。

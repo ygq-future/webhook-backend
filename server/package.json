@@ -11,10 +11,13 @@
   "dependencies": {
     "hono": "^4.9.4",
     "@wh/shared": "workspace:*",
+    "nodemailer": "^7.0.3",
+    "postgres": "^3.4.5",
     "zod": "^4.0.5"
   },
   "devDependencies": {
     "typescript": "^5.8.3",
-    "@types/bun": "^1.2.0"
+    "@types/bun": "^1.2.0",
+    "@types/nodemailer": "^6.4.17"
   }
 }

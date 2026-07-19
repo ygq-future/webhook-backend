@@ -26,6 +26,18 @@ export default tseslint.config(
       ecmaVersion: 2022,
       sourceType: 'module',
     },
+    rules: {
+      // 允许以下划线开头的未使用参数/变量：用于接口约定的占位参数
+      // （如渠道 deliver(target, event, deps) 的保留通道 phone/ws）。
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
   {
     files: ['**/*.tsx'],
