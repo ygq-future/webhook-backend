@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, Inbox, ArrowUpRight, Clock } from 'lucide-react'
+import { ChevronDown, ChevronRight, Inbox, ArrowUpRight, Clock, RefreshCw } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -166,7 +166,7 @@ export default function Logs() {
   const [expanded, setExpanded] = React.useState<Set<number>>(new Set())
   const [onlyFailed, setOnlyFailed] = React.useState(false)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['logs-inbound'],
     queryFn: () => statsApi.inbound({ limit: 100 }),
   })
@@ -190,9 +190,21 @@ export default function Logs() {
           <h1 className="text-xl font-semibold tracking-tight">转发日志</h1>
           <p className="text-muted-foreground text-sm">一次入站请求对应 N 个出站转发（1:N），可展开查看完整明细</p>
         </div>
-        <Button variant={onlyFailed ? 'default' : 'outline'} size="sm" onClick={() => setOnlyFailed(v => !v)}>
-          {onlyFailed ? '显示全部' : '仅看失败'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            title="刷新日志"
+            aria-label="刷新日志">
+            <RefreshCw className={isFetching ? 'animate-spin' : ''} />
+            刷新
+          </Button>
+          <Button variant={onlyFailed ? 'default' : 'outline'} size="sm" onClick={() => setOnlyFailed(v => !v)}>
+            {onlyFailed ? '显示全部' : '仅看失败'}
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

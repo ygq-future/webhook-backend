@@ -11,11 +11,11 @@
   --radius: 1rem;
 
   /* 玻璃材质 token */
-  --glass-bg: rgba(22, 24, 30, 0.64);
-  --glass-bg-strong: rgba(31, 34, 42, 0.78);
-  --glass-border: rgba(255, 255, 255, 0.16);
-  --glass-border-strong: rgba(255, 255, 255, 0.28);
-  --glass-sheen: rgba(255, 255, 255, 0.18); /* 顶部高光内描边 */
+  --glass-bg: rgba(15, 21, 32, 0.42);
+  --glass-bg-strong: rgba(18, 27, 42, 0.66);
+  --glass-border: rgba(190, 214, 238, 0.16);
+  --glass-border-strong: rgba(203, 226, 248, 0.28);
+  --glass-sheen: rgba(221, 237, 255, 0.16); /* 顶部高光内描边 */
 
   /* 基础色：极简黑白 */
   --background: #0e0f12; /* 仅小部件（如开关滑块）需要不透明底时使用 */
@@ -25,8 +25,8 @@
   --popover: rgba(18, 20, 24, 0.9);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.98 0 0); /* 纯白 */
-  --primary-foreground: oklch(0.18 0 0); /* 近黑，白底黑字 */
+  --primary: oklch(0.82 0.045 224); /* 冷蓝灰，避免白色按钮抢焦 */
+  --primary-foreground: oklch(0.16 0.025 228);
 
   --secondary: rgba(255, 255, 255, 0.06);
   --secondary-foreground: var(--foreground);
@@ -70,25 +70,25 @@
 @utility glass {
   background-color: var(--glass-bg);
   background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0) 36%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 45%);
+    linear-gradient(125deg, rgba(198, 224, 255, 0.1), rgba(198, 224, 255, 0) 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 42%);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(24px) saturate(155%);
-  -webkit-backdrop-filter: blur(24px) saturate(155%);
+  backdrop-filter: blur(32px) saturate(145%);
+  -webkit-backdrop-filter: blur(32px) saturate(145%);
   box-shadow:
     inset 0 1px 0 var(--glass-sheen),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 20px 56px rgba(0, 0, 0, 0.42);
+    inset 0 0 0 1px rgba(190, 214, 238, 0.035),
+    0 24px 72px rgba(0, 0, 0, 0.38);
 }
 @utility glass-soft {
-  background-color: rgba(30, 33, 41, 0.5);
-  background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 45%);
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  backdrop-filter: blur(14px) saturate(135%);
-  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  background-color: rgba(14, 21, 32, 0.3);
+  background-image: linear-gradient(145deg, rgba(176, 211, 246, 0.065), rgba(176, 211, 246, 0) 42%);
+  border: 1px solid rgba(190, 214, 238, 0.12);
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 8px 24px rgba(0, 0, 0, 0.12);
+    inset 0 1px 0 rgba(221, 237, 255, 0.08),
+    0 10px 30px rgba(0, 0, 0, 0.14);
 }
 
 /* 弹窗只动画合成层属性；避免 zoom 改变表单布局，降低大面板首次打开时的卡顿。 */
@@ -96,24 +96,20 @@
   from {
     opacity: 0;
     scale: 0.97;
-    translate: 0 8px;
   }
   to {
     opacity: 1;
     scale: 1;
-    translate: 0 0;
   }
 }
 @keyframes wh-dialog-out {
   from {
     opacity: 1;
     scale: 1;
-    translate: 0 0;
   }
   to {
     opacity: 0;
     scale: 0.98;
-    translate: 0 4px;
   }
 }
 
@@ -176,11 +172,11 @@
        背景越有层次，backdrop-blur 的磨砂质感越清晰可见。 */
     background-color: #0a0b0d;
     background-image:
-      radial-gradient(42rem 42rem at 10% -10%, rgba(255, 255, 255, 0.14), transparent 55%),
-      radial-gradient(40rem 40rem at 102% -4%, rgba(205, 215, 230, 0.12), transparent 52%),
-      radial-gradient(48rem 48rem at 50% 112%, rgba(255, 255, 255, 0.1), transparent 56%),
-      radial-gradient(34rem 34rem at 82% 68%, rgba(255, 255, 255, 0.06), transparent 60%),
-      radial-gradient(26rem 26rem at 20% 60%, rgba(255, 255, 255, 0.05), transparent 62%);
+      radial-gradient(38rem 38rem at 5% -8%, rgba(74, 129, 190, 0.24), transparent 58%),
+      radial-gradient(42rem 42rem at 105% 4%, rgba(79, 69, 145, 0.19), transparent 56%),
+      radial-gradient(46rem 46rem at 50% 112%, rgba(35, 93, 135, 0.2), transparent 60%),
+      radial-gradient(30rem 30rem at 82% 62%, rgba(44, 111, 130, 0.12), transparent 62%),
+      linear-gradient(145deg, #080d16 0%, #0a0d14 48%, #0d0b17 100%);
     background-attachment: fixed;
     min-height: 100vh;
   }

@@ -96,6 +96,13 @@
 - **WebUI**：降低嵌套玻璃层的透明度与模糊半径，增加可见的材质层次；弹窗由会触发布局的 `zoom` 改为 `opacity + scale + translate` 合成层动画，遮罩加入轻量模糊，并尊重 `prefers-reduced-motion`。
 - **Docker**：运行时只安装 production 依赖；`docker-compose.yml` 改为源码父目录模板，使用 `env_file: ./webhook-backend/.env` 和 `./webhook-backend/data:/app/data`，移除 PostgreSQL 配置，服务名改为 `webhook-backend`。
 
+### 2026-07-19 — 修复 Dialog 偏移、日志发件人快照与玻璃材质
+
+- **Dialog**：上一版动画使用 CSS individual `translate`，覆盖 Tailwind v4 的居中 `-translate-x-1/2 -translate-y-1/2`，导致弹窗偏移到右下角；动画现在只改变 `opacity` 和 `scale`。浏览器验证在 1280×720 视口中弹窗中心为 `(640, 360)`。
+- **邮件日志**：SMTP 实际发送仍使用 RFC 5322 的显示名格式；出站日志快照改为记录纯发件地址，避免 JSON 中出现误解性的 `"名称" <地址>`。
+- **日志页**：增加手动刷新按钮，刷新期间显示旋转图标并禁用按钮。
+- **视觉**：重做冷蓝灰玻璃材质，降低白色高光和纯白按钮，增加背景光斑、32px 背景模糊和更克制的内描边。
+
 ### 2026-07-19 16:10 — 完成 M5 WebUI（shadcn/ui 管理台）并生产托管验证
 - **UI 组件**：手写落地 shadcn 组件 `input/textarea/label/card/badge/switch/table/dialog/select/sonner`（Radix + Tailwind，源码入库），新增依赖 `@radix-ui/react-{label,dialog,select,switch,tabs}` + `sonner`。
 - **基础设施**：`lib/api.ts`（同源 `/api/*` fetch 客户端 + 全量 TS 类型 + auth/stats/endpoints/accounts 四组 API，`credentials:'include'`）；`lib/auth.tsx`（AuthProvider + `useAuth`，启动查 `/auth/me`）；`components/layout.tsx`（侧边栏导航 + 退出登录）。

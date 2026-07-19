@@ -42,7 +42,8 @@ export class EmailChannel implements ForwardChannel {
     const request: OutboundRequest = {
       url: `smtp://${account.host}:${account.port}`,
       method: 'SMTP',
-      headers: { from, to, subject },
+      // 日志快照展示纯地址；SMTP 实际发送仍使用带显示名的 RFC 5322 from。
+      headers: { from: account.email, to, subject },
       body: rendered,
     }
 
