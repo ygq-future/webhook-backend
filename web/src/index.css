@@ -11,11 +11,11 @@
   --radius: 1rem;
 
   /* 玻璃材质 token */
-  --glass-bg: rgba(255, 255, 255, 0.055);
-  --glass-bg-strong: rgba(255, 255, 255, 0.09);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-strong: rgba(255, 255, 255, 0.16);
-  --glass-sheen: rgba(255, 255, 255, 0.08); /* 顶部高光内描边 */
+  --glass-bg: rgba(255, 255, 255, 0.085);
+  --glass-bg-strong: rgba(255, 255, 255, 0.13);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border-strong: rgba(255, 255, 255, 0.22);
+  --glass-sheen: rgba(255, 255, 255, 0.14); /* 顶部高光内描边 */
 
   /* 基础色：极简黑白 */
   --background: #0e0f12; /* 仅小部件（如开关滑块）需要不透明底时使用 */
@@ -69,39 +69,45 @@
 /* 玻璃工具类（@utility 保证可被 hover:/active:/focus: 等变体组合） */
 @utility glass {
   background-color: var(--glass-bg);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 42%);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(30px) saturate(170%);
+  -webkit-backdrop-filter: blur(30px) saturate(170%);
   box-shadow:
     inset 0 1px 0 var(--glass-sheen),
-    0 8px 32px rgba(0, 0, 0, 0.45);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 16px 48px rgba(0, 0, 0, 0.55);
 }
 @utility glass-soft {
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px) saturate(130%);
-  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  background-color: rgba(255, 255, 255, 0.06);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 50%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* 弹窗进入/退出动画（与 Radix data-state 配合；居中元素需保留 -translate 1/2） */
+/* 弹窗进入/退出动画：只动画 opacity + zoom（zoom 是独立属性，不占用 transform），
+   因此与定位用的 -translate 互不干扰 —— 根本上消除「从右上角跳出再跳回中间」的生硬感。
+   加 both 让 from 状态在动画开始前即生效，消除首帧闪烁。 */
 @keyframes wh-dialog-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.96);
+    zoom: 0.96;
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    zoom: 1;
   }
 }
 @keyframes wh-dialog-out {
   from {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    zoom: 1;
   }
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.96);
+    zoom: 0.96;
   }
 }
 
@@ -149,12 +155,15 @@
       'PingFang SC',
       'Microsoft YaHei',
       sans-serif;
-    /* 近黑底色 + 极淡辉光（黑白为主，仅一缕冷调帮助玻璃折射） */
+    /* 近黑底色 + 更明显的辉光层次（黑白为主，仅极淡中性冷光帮助玻璃折射）。
+       背景越有层次，backdrop-blur 的磨砂质感越清晰可见。 */
     background-color: #0a0b0d;
     background-image:
-      radial-gradient(48rem 48rem at 12% -8%, rgba(255, 255, 255, 0.06), transparent 60%),
-      radial-gradient(42rem 42rem at 102% -4%, rgba(150, 180, 210, 0.05), transparent 55%),
-      radial-gradient(40rem 40rem at 50% 120%, rgba(255, 255, 255, 0.045), transparent 60%);
+      radial-gradient(42rem 42rem at 10% -10%, rgba(255, 255, 255, 0.14), transparent 55%),
+      radial-gradient(40rem 40rem at 102% -4%, rgba(205, 215, 230, 0.12), transparent 52%),
+      radial-gradient(48rem 48rem at 50% 112%, rgba(255, 255, 255, 0.1), transparent 56%),
+      radial-gradient(34rem 34rem at 82% 68%, rgba(255, 255, 255, 0.06), transparent 60%),
+      radial-gradient(26rem 26rem at 20% 60%, rgba(255, 255, 255, 0.05), transparent 62%);
     background-attachment: fixed;
     min-height: 100vh;
   }
