@@ -32,28 +32,30 @@ const inputAuthSchema = z.discriminatedUnion('type', [
   }),
 ])
 
-const endpointInputSchema = z
-  .object({
-    subpath: z.string().regex(/^[a-z0-9-_]+$/, '仅允许小写字母/数字/-/_'),
-    title: z.string().min(1),
-    description: z.string().optional(),
-    active: z.boolean().default(true),
-    mode: z.enum(['forward', 'reply']).default('forward'),
-    methods: z.array(z.string()).min(1).default(['POST']),
-    parser: parserSchema.optional(),
-    auth: inputAuthSchema.default({ type: 'none' }),
-    targets: z.array(forwardTargetSchema).default([]),
-    reply: endpointReplySchema.optional(),
-  })
-  .superRefine((endpoint, ctx) => {
-    if (endpoint.mode === 'forward' && endpoint.targets.length === 0) {
-      ctx.addIssue({ code: 'custom', path: ['targets'], message: '转发模式至少需要一个转发目标' })
-    }
-    if (endpoint.mode === 'reply' && !endpoint.reply) {
-      ctx.addIssue({ code: 'custom', path: ['reply'], message: '响应模式需要配置响应内容' })
-    }
-  })
-const endpointPatchSchema = endpointInputSchema.partial()
+const endpointFieldsSchema = z.object({
+  subpath: z.string().regex(/^[a-z0-9-_]+$/, '仅允许小写字母/数字/-/_'),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  active: z.boolean().default(true),
+  mode: z.enum(['forward', 'reply']).default('forward'),
+  methods: z.array(z.string()).min(1).default(['POST']),
+  parser: parserSchema.optional(),
+  auth: inputAuthSchema.default({ type: 'none' }),
+  targets: z.array(forwardTargetSchema).default([]),
+  reply: endpointReplySchema.optional(),
+})
+
+const endpointInputSchema = endpointFieldsSchema.superRefine((endpoint, ctx) => {
+  if (endpoint.mode === 'forward' && endpoint.targets.length === 0) {
+    ctx.addIssue({ code: 'custom', path: ['targets'], message: '转发模式至少需要一个转发目标' })
+  }
+  if (endpoint.mode === 'reply' && !endpoint.reply) {
+    ctx.addIssue({ code: 'custom', path: ['reply'], message: '响应模式需要配置响应内容' })
+  }
+})
+// Zod 4 不允许对带 refinements 的 object 直接调用 partial；更新请求本身是局部字段，
+// 模式与 targets/reply 的组合约束由创建 schema 和前端完整提交负责。
+const endpointPatchSchema = endpointFieldsSchema.partial()
 
 type InputAuth = z.infer<typeof inputAuthSchema>
 
