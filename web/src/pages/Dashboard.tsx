@@ -20,7 +20,7 @@ function StatCard({
   return (
     <Card>
       <CardContent className="flex items-center gap-4 p-5">
-        <div className={`neu-pressed flex h-12 w-12 items-center justify-center rounded-2xl ${tone ?? ''}`}>
+        <div className={`glass-soft flex h-12 w-12 items-center justify-center rounded-2xl ${tone ?? ''}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div>

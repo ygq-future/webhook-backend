@@ -24,7 +24,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
           className={({ isActive }) =>
             cn(
               'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-              isActive ? 'neu-pressed text-primary' : 'text-muted-foreground hover:neu-raised hover:text-primary',
+              isActive ? 'bg-white/10 text-white' : 'text-muted-foreground hover:bg-white/5 hover:text-white',
             )
           }>
           <item.icon className="h-4 w-4" />
@@ -38,7 +38,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 function UserFooter({ onLogout }: { onLogout: () => void }) {
   const { user } = useAuth()
   return (
-    <div className="border-border border-t p-3">
+    <div className="border-t border-white/10 p-3">
       <div className="text-muted-foreground mb-2 px-1 text-xs">已登录：{user}</div>
       <Button variant="ghost" size="sm" className="w-full justify-start" onClick={onLogout}>
         <LogOut className="h-4 w-4" />
@@ -61,8 +61,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       {/* 桌面端：固定侧边栏 */}
-      <aside className="neu-raised hidden w-56 shrink-0 flex-col rounded-none md:flex">
-        <div className="border-border flex h-16 items-center gap-2 border-b px-4">
+      <aside className="glass hidden w-56 shrink-0 flex-col rounded-none md:flex">
+        <div className="flex h-16 items-center gap-2 border-b border-white/10 px-4">
           <Webhook className="text-primary h-5 w-5" />
           <span className="font-semibold tracking-tight">转发中心</span>
         </div>
@@ -71,7 +71,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* 移动端：顶部栏 */}
-      <div className="neu-raised fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between rounded-none px-4 md:hidden">
+      <div className="glass fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between rounded-none px-4 md:hidden">
         <div className="flex items-center gap-2">
           <Webhook className="text-primary h-5 w-5" />
           <span className="font-semibold tracking-tight">转发中心</span>
@@ -85,8 +85,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {mobileOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} aria-hidden />
-          <aside className="neu-raised fixed top-0 left-0 z-50 flex h-full w-64 flex-col rounded-none md:hidden">
-            <div className="border-border flex h-14 items-center justify-between border-b px-4">
+          <aside className="glass fixed top-0 left-0 z-50 flex h-full w-64 flex-col rounded-none md:hidden">
+            <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
               <div className="flex items-center gap-2">
                 <Webhook className="text-primary h-5 w-5" />
                 <span className="font-semibold tracking-tight">转发中心</span>

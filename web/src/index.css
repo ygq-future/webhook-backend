@@ -1,43 +1,43 @@
 @import 'tailwindcss';
 
 /* =============================================================
- * 浅色 Neumorphism（软 UI）主题
- * 设计要点：背景与所有"面"（卡片/侧栏/输入/弹层）同色，
- * 通过双向柔和阴影制造“浮起 / 按下”的立体感，去除生硬描边。
- * 点缀色：薄荷绿 / Teal（非蓝）。
- * 阴影由 --neu-shadow-light（左上高光）与 --neu-shadow-dark（右下暗影）组成。
+ * 极简黑白 + Glassmorphism（毛玻璃）主题
+ * 设计要点：近黑渐变背景 + 极淡辉光，所有“面”（卡片/侧栏/输入/弹层）
+ * 用半透明 + backdrop-blur 做出磨砂玻璃质感；点缀色极克制——主色为纯白，
+ * 仅状态语义（成功/失败）保留低饱和的绿/红，整体保持清新、不杂乱、非复古。
  * ============================================================= */
 :root {
   --radius: 1rem;
 
-  /* 同色“面”基准色（极淡薄荷灰，非蓝） */
-  --neu-bg: oklch(0.94 0.006 170);
-  --neu-shadow-light: oklch(1 0 0); /* 纯白高光 */
-  --neu-shadow-dark: oklch(0.83 0.012 170); /* 同色系暗影 */
+  /* 玻璃材质 token */
+  --glass-bg: rgba(255, 255, 255, 0.055);
+  --glass-bg-strong: rgba(255, 255, 255, 0.09);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-strong: rgba(255, 255, 255, 0.16);
+  --glass-sheen: rgba(255, 255, 255, 0.08); /* 顶部高光内描边 */
 
-  --background: var(--neu-bg);
-  --foreground: oklch(0.3 0.02 180); /* 深石板灰文字 */
-  --card: var(--neu-bg);
+  /* 基础色：极简黑白 */
+  --background: #0e0f12; /* 仅小部件（如开关滑块）需要不透明底时使用 */
+  --foreground: oklch(0.97 0 0); /* 近白文字 */
+  --card: var(--glass-bg);
   --card-foreground: var(--foreground);
-  --popover: var(--neu-bg);
+  --popover: rgba(18, 20, 24, 0.9);
   --popover-foreground: var(--foreground);
 
-  /* 强调色：薄荷绿 / Teal */
-  --primary: oklch(0.68 0.13 185);
-  --primary-foreground: oklch(0.99 0.01 185);
+  --primary: oklch(0.98 0 0); /* 纯白 */
+  --primary-foreground: oklch(0.18 0 0); /* 近黑，白底黑字 */
 
-  /* 次级 / 静音 / 强调面：均与基准同色，靠阴影区分 */
-  --secondary: var(--neu-bg);
+  --secondary: rgba(255, 255, 255, 0.06);
   --secondary-foreground: var(--foreground);
-  --muted: var(--neu-bg);
-  --muted-foreground: oklch(0.52 0.02 190);
-  --accent: var(--neu-bg);
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: oklch(0.64 0 0); /* 中灰 */
+  --accent: rgba(255, 255, 255, 0.1);
   --accent-foreground: var(--foreground);
 
-  --destructive: oklch(0.58 0.2 25); /* 柔和红，用于失败/删除 */
-  --border: oklch(0.82 0.012 170 / 0.5); /* 极淡分隔线，仅表格等辅助位置使用 */
-  --input: var(--neu-bg);
-  --ring: var(--primary);
+  --destructive: oklch(0.62 0.19 25); /* 克制的红 */
+  --border: rgba(255, 255, 255, 0.1);
+  --input: transparent;
+  --ring: oklch(0.95 0 0);
 }
 
 @theme inline {
@@ -65,30 +65,32 @@
   --color-ring: var(--ring);
 }
 
-/* Neumorphism 工具类（@utility 保证可被 active:/hover: 等变体组合） */
-@utility neu-raised {
-  background-color: var(--neu-bg);
+/* 玻璃工具类（@utility 保证可被 hover:/active:/focus: 等变体组合） */
+@utility glass {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
   box-shadow:
-    8px 8px 16px var(--neu-shadow-dark),
-    -8px -8px 16px var(--neu-shadow-light);
+    inset 0 1px 0 var(--glass-sheen),
+    0 8px 32px rgba(0, 0, 0, 0.45);
 }
-@utility neu-pressed {
-  background-color: var(--neu-bg);
-  box-shadow:
-    inset 6px 6px 12px var(--neu-shadow-dark),
-    inset -6px -6px 12px var(--neu-shadow-light);
-}
-@utility neu-flat {
-  background-color: var(--neu-bg);
-  box-shadow: none;
+@utility glass-soft {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px) saturate(130%);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    color-scheme: dark;
+  }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
     font-family:
       ui-sans-serif,
       system-ui,
@@ -99,5 +101,13 @@
       'PingFang SC',
       'Microsoft YaHei',
       sans-serif;
+    /* 近黑底色 + 极淡辉光（黑白为主，仅一缕冷调帮助玻璃折射） */
+    background-color: #0a0b0d;
+    background-image:
+      radial-gradient(48rem 48rem at 12% -8%, rgba(255, 255, 255, 0.06), transparent 60%),
+      radial-gradient(42rem 42rem at 102% -4%, rgba(150, 180, 210, 0.05), transparent 55%),
+      radial-gradient(40rem 40rem at 50% 120%, rgba(255, 255, 255, 0.045), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 }

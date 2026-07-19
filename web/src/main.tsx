@@ -12,7 +12,9 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 })
 
-// 浅色 Neumorphism 主题（去掉原深蓝配色）
+// 极简黑白 + Glassmorphism（深色毛玻璃）主题
+
+document.documentElement.classList.add('dark')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -335,7 +335,7 @@ export function EndpointDialog({
           </section>
 
           {/* 解析 */}
-          <section className="neu-pressed space-y-3 rounded-2xl p-4">
+          <section className="glass-soft space-y-3 rounded-2xl p-4">
             <div className="text-sm font-medium">入站解析</div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
@@ -423,7 +423,7 @@ export function EndpointDialog({
           </section>
 
           {/* HMAC 校验 */}
-          <section className="neu-pressed space-y-3 rounded-2xl p-4">
+          <section className="glass-soft space-y-3 rounded-2xl p-4">
             <label className="flex items-center gap-2 text-sm font-medium">
               <Switch checked={form.authType === 'hmac'} onCheckedChange={v => set('authType', v ? 'hmac' : 'none')} />
               启用 HMAC-SHA-256 验签
@@ -508,7 +508,7 @@ export function EndpointDialog({
               </Button>
             </div>
             {form.targets.map((t, i) => (
-              <div key={i} className="neu-pressed space-y-3 rounded-2xl p-4">
+              <div key={i} className="glass-soft space-y-3 rounded-2xl p-4">
                 <div className="flex items-center gap-3">
                   <Select value={t.channel} onValueChange={v => switchChannel(i, v as 'email' | 'http')}>
                     <SelectTrigger className="w-32">
