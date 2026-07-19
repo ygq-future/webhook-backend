@@ -11,10 +11,10 @@
 
 | 项 | 状态 |
 |----|------|
-| 当前阶段 | **实现阶段（Implement）** — M1–M6 已完成，进入 M7 收尾加固 |
-| 代码实现 | 🟢 接近完成（M1–M6 完成；M7 收尾中） |
-| 下一步 | M7 加固收尾：全量门禁 + 记忆/文档更新 + 最终提交 |
-| 最近更新 | 2026-07-19 16:35 |
+| 当前阶段 | **实现完成（Implemented）** — M1–M7 全部完成并端到端验证 |
+| 代码实现 | ✅ 完成（M1–M7 全部完成） |
+| 下一步 | 交付使用；后续可选：真实 SMTP 发信联调、Docker 镜像实机构建、更多渠道（Phone/WS） |
+| 最近更新 | 2026-07-19 16:50 |
 
 ### 交付物清单
 
@@ -39,7 +39,7 @@
 | **M4 转发通道** | `ForwardChannel` 抽象 + `EmailChannel` + `HttpChannel`（出站转发）+ 日志；预留 Phone/WS | ✅ 已完成 |
 | **M5 WebUI** | 登录、仪表盘、子路径管理、账号管理页（shadcn/ui） | ✅ 已完成 |
 | **M6 部署** | Dockerfile + compose + 健康检查 + 文档 | ✅ 已完成 |
-| **M7 加固** | 限流/重试、签名校验、压测 | ⬜ 未开始 |
+| **M7 加固** | 限流/重试、签名校验、压测 | ✅ 已完成 |
 
 图例：⬜ 未开始 ｜ 🟡 进行中 ｜ ✅ 已完成
 
@@ -48,6 +48,14 @@
 ## 3. 决策日志（Decision Log）
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
+
+### 2026-07-19 16:50 — 完成 M7 加固（Webhook 限流）+ 全量验证，项目实现完成
+- **限流**：新增 `middleware/rate-limit.ts`——固定窗口内存限流器（默认 120 次/60s/客户端，`RATE_LIMIT_WINDOW_MS`/`RATE_LIMIT_MAX` 可调，`MAX<=0` 关闭）；客户端标识优先 `x-forwarded-for`/`x-real-ip`，回退 Bun `requestIP`；响应带 `X-RateLimit-{Limit,Remaining,Reset}`，超限返回 429 + `Retry-After`；惰性清理过期桶。已挂载到 `/wh/:subpath` 公开入口。
+- **测试**：新增 `rate-limit.test.ts`（放行/递减、429+Retry-After、多客户端独立计数，3 用例）。全仓 **21 pass / 0 fail**。
+- **重试**：出站 HttpChannel 的指数退避重试（`retries+1` 次）已在 M4 落地并经端到端验证。
+- **最终端到端验证**（生产模式，托管 dist）：登录 ✅、创建端点 201 ✅、`POST /wh/demo` 200 且返回限流头（Limit=120/Remaining=119）✅、HTTP 转发成功落库 ✅、`/api/stats` 返回 `endpoints:1/success:1` ✅。
+- **门禁**：`format` ✅、`lint` ✅（0/0）、`test` ✅（21 pass）、`typecheck`（shared+server+web）✅。
+- **影响**：M7 里程碑 ✅；**M1–M7 全部完成，项目实现阶段收官**。
 
 ### 2026-07-19 16:35 — 完成 M6 部署（Docker 多阶段 + compose + README）
 - **Dockerfile**：多阶段——builder（`oven/bun:1`，先拷贝各包 `package.json` + `bun.lock` 做 `bun install --frozen-lockfile` 以复用缓存，再 `bun run build:web`）；runtime（`oven/bun:1-slim`，仅拷贝 node_modules/packages/server/web/dist/package.json）。**运行时直接 `bun run server/src/index.ts`**（而非打包，规避 nodemailer/postgres 动态 require 打包问题）。`VOLUME /app/data` 持久化 SQLite；`HEALTHCHECK` 用 bun 原生 `fetch` 打 `/api/health`（slim 无 curl）。

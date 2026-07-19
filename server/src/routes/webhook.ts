@@ -2,6 +2,7 @@ import type { HmacAuth } from '@wh/shared'
 import { Hono } from 'hono'
 import { getRepos } from '../db'
 import { decryptSecret } from '../services/crypto'
+import { rateLimit } from '../middleware/rate-limit'
 import { forwardEvent } from '../services/forward-engine'
 import { verifyInboundHmac } from '../services/hmac'
 
@@ -14,6 +15,9 @@ import { verifyInboundHmac } from '../services/hmac'
  * 参考设计文档 §5.1 / §6
  */
 export const webhookRouter = new Hono()
+
+// 公开入口：按客户端 IP 限流，抵御突发滥用
+webhookRouter.use('/:subpath', rateLimit('webhook'))
 
 /** 收集请求头为小写键的普通对象（HMAC/解析统一使用小写键） */
 function collectHeaders(req: Request): Record<string, string> {
