@@ -71,11 +71,13 @@ function applyAuth(
   }
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number, proxy?: string): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    return await fetch(url, { ...init, signal: controller.signal })
+    const opts: RequestInit = { ...init, signal: controller.signal }
+    if (proxy) (opts as Record<string, unknown>).proxy = proxy
+    return await fetch(url, opts)
   } finally {
     clearTimeout(timer)
   }
@@ -107,7 +109,12 @@ export class HttpChannel implements ForwardChannel {
     for (let i = 0; i < attempts; i++) {
       const started = Date.now()
       try {
-        const res = await fetchWithTimeout(url, { method: target.method, headers, body }, target.timeoutMs)
+        const res = await fetchWithTimeout(
+          url,
+          { method: target.method, headers, body },
+          target.timeoutMs,
+          target.proxy,
+        )
         const respText = await res.text()
         response = { status: res.status, body: respText.slice(0, 8000), durationMs: Date.now() - started }
         if (res.ok) return { ok: true, detail: `HTTP ${res.status}`, request, response }

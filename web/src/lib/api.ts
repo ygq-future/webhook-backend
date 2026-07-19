@@ -123,6 +123,8 @@ export interface HttpTarget {
   auth?: HttpOutAuth
   timeoutMs?: number
   retries?: number
+  /** 可选 HTTP/HTTPS 代理：出站请求经此代理转发 */
+  proxy?: string
 }
 
 export type ForwardTarget = EmailTarget | HttpTarget

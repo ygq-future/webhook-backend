@@ -42,6 +42,7 @@ interface HttpTargetForm {
   authSecret: string
   timeoutMs: number
   retries: number
+  proxy: string
   sampleBody: string
 }
 type TargetForm = EmailTargetForm | HttpTargetForm
@@ -98,6 +99,7 @@ const emptyHttpTarget = (): HttpTargetForm => ({
   authSecret: '',
   timeoutMs: 10000,
   retries: 3,
+  proxy: '',
   sampleBody: SAMPLE_BODY,
 })
 
@@ -231,6 +233,7 @@ function toForm(ep: EndpointRow): FormState {
             authSecret: '',
             timeoutMs: t.timeoutMs ?? 10000,
             retries: t.retries ?? 3,
+            proxy: t.proxy ?? '',
             sampleBody: SAMPLE_BODY,
           },
     ),
@@ -311,6 +314,7 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
       auth: outAuth,
       timeoutMs: t.timeoutMs,
       retries: t.retries,
+      ...(t.proxy.trim() ? { proxy: t.proxy.trim() } : {}),
     } as ForwardTarget
   })
 
@@ -804,6 +808,18 @@ export function EndpointDialog({
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>代理 Proxy（可选）</Label>
+                      <Input
+                        value={t.proxy}
+                        onChange={e => updateTarget(i, { proxy: e.target.value })}
+                        placeholder="http://127.0.0.1:7890"
+                      />
+                      <p className="text-muted-foreground text-xs leading-relaxed break-words">
+                        出站请求将经由该 HTTP/HTTPS 代理转发（如公司内网出口、网关）。留空则直连；需以{' '}
+                        <code className="rounded bg-white/10 px-1">http(s)://</code> 开头。
+                      </p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-2">

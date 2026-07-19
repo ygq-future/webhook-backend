@@ -97,6 +97,8 @@ export const httpTargetSchema = z.object({
   auth: httpOutAuthSchema.default({ type: 'none' }),
   timeoutMs: z.number().int().positive().default(10000),
   retries: z.number().int().nonnegative().default(3),
+  /** 可选 HTTP/HTTPS 代理：出站请求经此代理转发（公司出口/网关场景） */
+  proxy: z.string().url().optional(),
 })
 export type HttpTarget = z.infer<typeof httpTargetSchema>
 
