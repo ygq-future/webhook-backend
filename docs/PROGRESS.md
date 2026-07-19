@@ -14,7 +14,7 @@
 | 当前阶段 | **实现完成（Implemented）** — M1–M7 全部完成并端到端验证 |
 | 代码实现 | ✅ 完成（M1–M7 全部完成） |
 | 下一步 | 交付使用；后续可选：更新 WebUI 提示说明、真实 SMTP 发信联调、Docker 镜像实机构建、更多渠道（Phone/WS） |
-| 最近更新 | 2026-07-19 19:05 |
+| 最近更新 | 2026-07-19 20:00 |
 
 ### 交付物清单
 
@@ -48,6 +48,13 @@
 ## 3. 决策日志（Decision Log）
 
 > 按时间倒序记录每次对话的关键决策、原因与影响文档。**追加，不修改历史。**
+
+### 2026-07-19 20:00 — 弹窗体验与毛玻璃增强 + 新增代理配置
+- **弹窗横向滚动**：`DialogContent` 面板加 `overflow-x-hidden`；所有说明段落（含 `code` 长 token）加 `break-words`，避免不可断行字符串把面板撑宽产生横向滚动条。
+- **弹窗生硬动画（从右上角跳出再回中间）**：根因是定位用 `-translate-x/y-1/2`，而动画关键帧又用 `transform: scale(...)` 与定位 translate 抢同一 `transform` 属性，导致首帧定位失效而跳位。改为**只动画 `opacity` + `zoom`**（zoom 是独立属性，不占用 transform），配合 `animation-fill-mode: both` 消除首帧闪烁；定位 translate 全程稳定 → 不再跳位。`web/src/index.css` 的 `@keyframes wh-dialog-in/out` 改为 opacity+zoom。
+- **毛玻璃增强**：玻璃 token 提透明度（`--glass-bg` 0.055→0.085、边框 0.10→0.14、sheen 0.08→0.14）、blur 22→30px、加顶部线性高光渐变；`glass-soft` 同步增强（blur 12→18px、加渐变）；body 背景辉光层次加密加亮（仍保持中性黑白，无彩色），让磨砂折射明显可见。
+- **新增 HTTP 目标代理配置**：`httpTargetSchema` 增加可选 `proxy`（z.string().url()）；`web/src/lib/api.ts` / `endpoint-dialog.tsx` 表单（HttpTargetForm / toForm / buildPayload / UI 输入框）全部打通；`server/src/services/channels/http.ts` 的 `fetchWithTimeout` 把 `target.proxy` 透传给 Bun 原生 `fetch({ proxy })`（已实测 Bun 1.3.14 的 fetch 支持 proxy 选项，请求确实经代理路由）。留空则直连。
+- **验证**：`bun run lint/format/typecheck` 全绿；`bun test` 29 全过；`build:server`/`build:web` 成功；预览后端已重启（端口 3000 单端口托管新版 SPA，SPA `/`、CSS、API 均 200）。**未提交**（待用户确认/统一提交）。
 
 ### 2026-07-19 19:42 — bodyExpr 抽取变量改名 `$` + HMAC 验签说明与配置补全
 - **`$` 变量**：用户要求把 bodyExpr 抽取结果在模板中的变量名由 `extracted` 简写为 `$`（更直观）。服务端与前端预览均以 `{ ...ctx, $: extracted }` 注入——标量用 `{{$}}`、对象用 `{{$.field}}`。
