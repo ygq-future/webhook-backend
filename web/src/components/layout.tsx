@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Webhook, Mail, LogOut, Menu, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -51,6 +51,7 @@ function UserFooter({ onLogout }: { onLogout: () => void }) {
 export function Layout({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   async function handleLogout() {
@@ -81,33 +82,44 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Button>
       </div>
 
-      {/* 移动端：抽屉 */}
-      {mobileOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMobileOpen(false)} aria-hidden />
-          <aside className="glass fixed top-0 left-0 z-50 flex h-full w-64 flex-col rounded-none md:hidden">
-            <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
-              <div className="flex items-center gap-2">
-                <Webhook className="text-primary h-5 w-5" />
-                <span className="font-semibold tracking-tight">转发中心</span>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} aria-label="关闭菜单">
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <NavList onNavigate={() => setMobileOpen(false)} />
-            <UserFooter
-              onLogout={() => {
-                setMobileOpen(false)
-                void handleLogout()
-              }}
-            />
-          </aside>
-        </>
-      )}
+      {/* 移动端：抽屉（始终挂载，用 transform/opacity 过渡，滑入 + 遮罩淡入） */}
+      <div
+        className={cn(
+          'fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 md:hidden',
+          mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+        onClick={() => setMobileOpen(false)}
+        aria-hidden
+      />
+      <aside
+        className={cn(
+          'glass fixed top-0 left-0 z-50 flex h-full w-64 flex-col rounded-none transition-transform duration-300 ease-out md:hidden',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        )}>
+        <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
+          <div className="flex items-center gap-2">
+            <Webhook className="text-primary h-5 w-5" />
+            <span className="font-semibold tracking-tight">转发中心</span>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} aria-label="关闭菜单">
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        <NavList onNavigate={() => setMobileOpen(false)} />
+        <UserFooter
+          onLogout={() => {
+            setMobileOpen(false)
+            void handleLogout()
+          }}
+        />
+      </aside>
 
       <main className="flex-1 overflow-x-hidden pt-14 md:pt-0">
-        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">{children}</div>
+        <div
+          key={location.pathname}
+          className="animate-in fade-in-0 slide-in-from-bottom-1 mx-auto max-w-5xl px-4 py-6 duration-300 sm:px-6 sm:py-8">
+          {children}
+        </div>
       </main>
     </div>
   )

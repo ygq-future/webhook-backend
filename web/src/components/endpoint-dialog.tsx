@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Code2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { accountsApi, endpointsApi, type EndpointRow, type ForwardTarget } from '@/lib/api'
+import { JsonEditor } from '@/components/ui/json-editor'
+import { accountsApi, endpointsApi, type ApiError, type EndpointRow, type ForwardTarget } from '@/lib/api'
+import { previewHttpBody } from '@/lib/expr'
 
 /* ---------------- 表单内部类型（宽松，提交前归一） ---------------- */
 interface EmailTargetForm {
@@ -28,6 +30,7 @@ interface HttpTargetForm {
   bodyExpr: string
   bodyTpl: string
   contentType: 'json' | 'form' | 'text'
+  headers: string
   authType: 'none' | 'bearer' | 'basic' | 'hmac'
   authToken: string
   authUser: string
@@ -37,6 +40,7 @@ interface HttpTargetForm {
   authSecret: string
   timeoutMs: number
   retries: number
+  sampleBody: string
 }
 type TargetForm = EmailTargetForm | HttpTargetForm
 
@@ -59,6 +63,8 @@ interface FormState {
   targets: TargetForm[]
 }
 
+const SAMPLE_BODY = '{\n  "message": "hello http forward",\n  "from": "alice",\n  "items": ["a", "b"]\n}'
+
 const emptyEmailTarget = (): EmailTargetForm => ({
   channel: 'email',
   accountId: '',
@@ -72,8 +78,9 @@ const emptyHttpTarget = (): HttpTargetForm => ({
   url: '',
   method: 'POST',
   bodyExpr: '',
-  bodyTpl: '',
+  bodyTpl: '{\n  "text": "{{message}}",\n  "sender": "{{from}}"\n}',
   contentType: 'json',
+  headers: '{}',
   authType: 'none',
   authToken: '',
   authUser: '',
@@ -83,6 +90,7 @@ const emptyHttpTarget = (): HttpTargetForm => ({
   authSecret: '',
   timeoutMs: 10000,
   retries: 3,
+  sampleBody: SAMPLE_BODY,
 })
 
 const EMPTY: FormState = {
@@ -101,7 +109,61 @@ const EMPTY: FormState = {
   hmacSignData: 'raw-body',
   hmacAlgorithm: 'sha256',
   hmacSecret: '',
-  targets: [emptyEmailTarget()],
+  // 默认首个目标改为 HTTP，避免空 email 目标触发后端 400
+  targets: [emptyHttpTarget()],
+}
+
+/* ---------------- 工具函数 ---------------- */
+function parseSample(s: string): unknown {
+  const t = s.trim()
+  if (!t) return {}
+  try {
+    return JSON.parse(t)
+  } catch {
+    return t
+  }
+}
+
+function parseHeaders(str: string): Record<string, string> | undefined {
+  const t = str.trim()
+  if (!t) return undefined
+  try {
+    const o = JSON.parse(t)
+    if (o && typeof o === 'object' && !Array.isArray(o)) return o as Record<string, string>
+  } catch {
+    /* 交给校验提示 */
+  }
+  return undefined
+}
+
+/** 客户端校验：在提交前拦截明显错误，给出中文说明 */
+function validateTargets(targets: TargetForm[]): string[] {
+  const errs: string[] = []
+  targets.forEach((t, i) => {
+    const label = `转发目标 ${i + 1}（${t.channel === 'email' ? '邮件' : 'HTTP'}）`
+    if (t.channel === 'email') {
+      if (!t.accountId.trim()) errs.push(`${label}：请选择发件账号`)
+      if (!t.to.trim()) errs.push(`${label}：收件人不能为空`)
+    } else {
+      if (!t.url.trim()) errs.push(`${label}：目标 URL 不能为空`)
+      else {
+        try {
+          new URL(t.url)
+        } catch {
+          errs.push(`${label}：URL 格式不正确（需 http(s)://…）`)
+        }
+      }
+      if (t.headers.trim()) {
+        try {
+          const o = JSON.parse(t.headers)
+          if (typeof o !== 'object' || o === null || Array.isArray(o)) errs.push(`${label}：Headers 必须是 JSON 对象`)
+        } catch {
+          errs.push(`${label}：Headers 不是合法 JSON`)
+        }
+      }
+    }
+  })
+  return errs
 }
 
 /* ---------------- 现有端点 → 表单 ---------------- */
@@ -141,6 +203,7 @@ function toForm(ep: EndpointRow): FormState {
             bodyExpr: t.bodyExpr ?? '',
             bodyTpl: t.bodyTpl ?? '',
             contentType: t.contentType ?? 'json',
+            headers: t.headers ? JSON.stringify(t.headers, null, 2) : '{}',
             authType: t.auth?.type ?? 'none',
             authToken: t.auth?.type === 'bearer' ? t.auth.token : '',
             authUser: t.auth?.type === 'basic' ? t.auth.username : '',
@@ -150,6 +213,7 @@ function toForm(ep: EndpointRow): FormState {
             authSecret: '',
             timeoutMs: t.timeoutMs ?? 10000,
             retries: t.retries ?? 3,
+            sampleBody: SAMPLE_BODY,
           },
     ),
   }
@@ -185,7 +249,6 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
       signData: form.hmacSignData,
       algorithm: form.hmacAlgorithm,
     }
-    // 密钥：新建必填；编辑留空表示沿用
     if (form.hmacSecret.trim() || !editing) auth.secretRef = form.hmacSecret.trim()
   } else {
     auth = { type: 'none' }
@@ -207,6 +270,7 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
     else if (t.authType === 'basic') outAuth = { type: 'basic', username: t.authUser, password: t.authPass }
     else if (t.authType === 'hmac')
       outAuth = { type: 'hmac', header: t.authHeader, scheme: t.authScheme, secretRef: t.authSecret }
+    const headers = parseHeaders(t.headers)
     return {
       channel: 'http',
       url: t.url,
@@ -214,6 +278,7 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
       bodyExpr: t.bodyExpr || undefined,
       bodyTpl: t.bodyTpl || undefined,
       contentType: t.contentType,
+      ...(headers ? { headers } : {}),
       auth: outAuth,
       timeoutMs: t.timeoutMs,
       retries: t.retries,
@@ -244,11 +309,19 @@ export function EndpointDialog({
   const qc = useQueryClient()
   const { data: accounts } = useQuery({ queryKey: ['accounts'], queryFn: accountsApi.list })
   const [form, setForm] = React.useState<FormState>(EMPTY)
+  const [showJson, setShowJson] = React.useState(false)
+  const [tryIt, setTryIt] = React.useState<Record<number, boolean>>({})
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }))
 
   React.useEffect(() => {
-    if (open) setForm(editing ? toForm(editing) : EMPTY)
+    if (open) {
+      setForm(editing ? toForm(editing) : EMPTY)
+      setShowJson(false)
+      setTryIt({})
+    }
   }, [open, editing])
+
+  const payloadPreview = JSON.stringify(buildPayload(form, Boolean(editing)), null, 2)
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -262,13 +335,23 @@ export function EndpointDialog({
       toast.success(editing ? '子路径已更新' : '子路径已创建')
       onOpenChange(false)
     },
-    onError: (e: Error) => toast.error('保存失败', { description: e.message }),
+    onError: (e: Error) => {
+      const detail = (e as ApiError).detail as { issues?: { path: (string | number)[]; message: string }[] } | undefined
+      let desc = e.message
+      if (detail?.issues?.length) {
+        const first = detail.issues[0]
+        desc = first.path.join('.').replace(/targets\.(\d+)/, '转发目标 $1') + '：' + first.message
+      }
+      toast.error('保存失败', { description: desc })
+    },
   })
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.subpath || !form.title) return toast.error('请填写子路径与标题')
+    if (!form.subpath.trim() || !form.title.trim()) return toast.error('请填写子路径与标题')
     if (form.targets.length === 0) return toast.error('至少配置一个转发目标')
+    const targetErrs = validateTargets(form.targets)
+    if (targetErrs.length) return toast.error('配置有误', { description: targetErrs[0] })
     if (form.authType === 'hmac' && !editing && !form.hmacSecret.trim()) return toast.error('HMAC 校验需填写密钥')
     mutation.mutate()
   }
@@ -276,7 +359,7 @@ export function EndpointDialog({
   /* ---- targets 操作 ---- */
   const updateTarget = (i: number, patch: Partial<TargetForm>) =>
     setForm(f => ({ ...f, targets: f.targets.map((t, idx) => (idx === i ? ({ ...t, ...patch } as TargetForm) : t)) }))
-  const addTarget = () => setForm(f => ({ ...f, targets: [...f.targets, emptyEmailTarget()] }))
+  const addTarget = () => setForm(f => ({ ...f, targets: [...f.targets, emptyHttpTarget()] }))
   const removeTarget = (i: number) => setForm(f => ({ ...f, targets: f.targets.filter((_, idx) => idx !== i) }))
   const switchChannel = (i: number, channel: 'email' | 'http') =>
     setForm(f => ({
@@ -337,6 +420,10 @@ export function EndpointDialog({
           {/* 解析 */}
           <section className="glass-soft space-y-3 rounded-2xl p-4">
             <div className="text-sm font-medium">入站解析</div>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              把任意来源的入站请求归一为命名变量，供下游转发使用。取值来源=请求体时，
+              <span className="text-foreground">根节点就是请求体本身</span>。
+            </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>取值来源</Label>
@@ -397,7 +484,7 @@ export function EndpointDialog({
                   <span className="text-muted-foreground">←</span>
                   <Input
                     value={m.value}
-                    placeholder="data.message"
+                    placeholder="message（根=请求体）"
                     onChange={e =>
                       set(
                         'mapping',
@@ -419,6 +506,12 @@ export function EndpointDialog({
                   </Button>
                 </div>
               ))}
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                例：对方 POST <code className="rounded bg-white/10 px-1">{'{"message":"hi"}'}</code> ，填
+                <code className="rounded bg-white/10 px-1">message</code> 即可；嵌套
+                <code className="rounded bg-white/10 px-1">a.b.c</code>，数组
+                <code className="rounded bg-white/10 px-1">a[0].b</code>。
+              </p>
             </div>
           </section>
 
@@ -606,11 +699,11 @@ export function EndpointDialog({
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>抽取表达式 bodyExpr（可选）</Label>
+                        <Label title="从事件上下文抽取子树作为发送体">抽取表达式 bodyExpr（可选）</Label>
                         <Input
                           value={t.bodyExpr}
                           onChange={e => updateTarget(i, { bodyExpr: e.target.value })}
-                          placeholder="data.message"
+                          placeholder="body.message"
                         />
                       </div>
                       <div className="space-y-2">
@@ -629,14 +722,62 @@ export function EndpointDialog({
                         </Select>
                       </div>
                     </div>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      根节点是<span className="text-foreground">事件上下文</span>：
+                      <code className="rounded bg-white/10 px-1">body.xxx</code>
+                      取请求体字段，或直接写映射出的变量名（如 <code className="rounded bg-white/10 px-1">text</code>
+                      ）。留空则发送整个请求体。
+                    </p>
                     <div className="space-y-2">
-                      <Label>Body 模板（可选，支持 {'{{变量}}'}）</Label>
-                      <Textarea
+                      <Label>Body 模板（支持 {'{{变量}}'}）</Label>
+                      <JsonEditor
                         value={t.bodyTpl}
-                        onChange={e => updateTarget(i, { bodyTpl: e.target.value })}
-                        placeholder='{"text":"{{text}}"}'
+                        onChange={v => updateTarget(i, { bodyTpl: v })}
+                        tolerant
+                        minHeight="120px"
+                        placeholder='{"text":"{{message}}"}'
                       />
                     </div>
+
+                    {/* 试一试：样例数据实时渲染预览 */}
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setTryIt(s => ({ ...s, [i]: !s[i] }))}>
+                        <Code2 className="h-3.5 w-3.5" />
+                        {tryIt[i] ? '收起试一试' : '试一试：粘贴样例入站数据预览出站 Body'}
+                      </Button>
+                      {tryIt[i] && (
+                        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label className="text-xs">样例入站数据（JSON）</Label>
+                            <Textarea
+                              value={t.sampleBody}
+                              onChange={e => updateTarget(i, { sampleBody: e.target.value })}
+                              className="font-mono text-xs"
+                              rows={8}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">出站 Body 预览</Label>
+                            <TryPreview target={t} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>请求头 Headers（JSON 对象，可选）</Label>
+                      <JsonEditor
+                        value={t.headers}
+                        onChange={v => updateTarget(i, { headers: v })}
+                        minHeight="80px"
+                        placeholder='{"X-Api-Key":"secret"}'
+                      />
+                    </div>
+
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>超时（ms）</Label>
@@ -727,6 +868,15 @@ export function EndpointDialog({
             ))}
           </section>
 
+          {/* 配置 JSON 预览 */}
+          <section className="space-y-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowJson(s => !s)}>
+              <Code2 className="h-3.5 w-3.5" />
+              {showJson ? '收起配置 JSON' : '查看配置 JSON（无需手写，仅供参考）'}
+            </Button>
+            {showJson && <JsonEditor value={payloadPreview} readOnly minHeight="180px" />}
+          </section>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               取消
@@ -738,5 +888,21 @@ export function EndpointDialog({
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/* 出站 Body 实时预览（与后端 http.ts 的 buildBody 对齐） */
+function TryPreview({ target }: { target: HttpTargetForm }) {
+  const sample = parseSample(target.sampleBody)
+  const { ok, output } = previewHttpBody({
+    bodyExpr: target.bodyExpr,
+    bodyTpl: target.bodyTpl,
+    contentType: target.contentType,
+    sampleBody: sample,
+  })
+  return (
+    <pre className="glass-soft text-foreground/90 max-h-56 overflow-auto rounded-xl border border-white/10 p-3 font-mono text-xs">
+      {ok ? output : <span className="text-destructive/90">{output || '（样例数据无效）'}</span>}
+    </pre>
   )
 }
