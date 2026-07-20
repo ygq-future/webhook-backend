@@ -107,7 +107,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       {/* 桌面端：固定侧边栏 */}
-      <aside className="glass hidden w-56 shrink-0 flex-col rounded-none md:flex">
+      <aside className="glass glass-chrome hidden w-56 shrink-0 flex-col rounded-none md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-white/10 px-4">
           <Webhook className="text-primary h-5 w-5" />
           <span className="font-semibold tracking-tight">转发中心</span>
@@ -117,7 +117,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* 移动端：顶部栏 */}
-      <div className="glass fixed inset-x-0 top-0 z-30 flex h-14 items-center gap-3 rounded-none px-3 md:hidden">
+      <div className="glass glass-chrome fixed inset-x-0 top-0 z-30 flex h-14 items-center gap-3 rounded-none px-3 md:hidden">
         <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)} aria-label="打开菜单">
           <Menu className="h-5 w-5" />
         </Button>
@@ -130,7 +130,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* 移动端：抽屉（始终挂载，用 transform/opacity 过渡，滑入 + 遮罩淡入） */}
       <div
         className={cn(
-          'fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 md:hidden',
+          'fixed inset-0 z-40 bg-black/72 transition-opacity duration-300 md:hidden',
           mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         onClick={closeMobileMenu}
@@ -138,7 +138,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       />
       <aside
         className={cn(
-          'frosted-drawer glass fixed top-0 left-0 z-50 flex h-full w-64 touch-pan-y flex-col overflow-y-auto overscroll-contain rounded-none transition-transform duration-300 ease-out md:hidden',
+          'frosted-drawer glass glass-chrome fixed top-0 left-0 z-50 flex h-full w-64 touch-pan-y flex-col overflow-y-auto overscroll-contain rounded-none transition-transform duration-300 ease-out md:hidden',
           mobileOpen ? '' : '-translate-x-full',
           draggingDrawer && 'transition-none',
         )}
