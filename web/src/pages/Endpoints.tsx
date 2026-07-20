@@ -76,10 +76,10 @@ export default function Endpoints() {
               <TableRow>
                 <TableHead>子路径</TableHead>
                 <TableHead>标题</TableHead>
-                <TableHead>方法</TableHead>
-                <TableHead>校验</TableHead>
-                <TableHead>转发目标</TableHead>
-                <TableHead>启用</TableHead>
+                <TableHead className="hidden sm:table-cell">方法</TableHead>
+                <TableHead className="hidden sm:table-cell">校验</TableHead>
+                <TableHead className="hidden md:table-cell">转发目标</TableHead>
+                <TableHead className="hidden sm:table-cell">启用</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -112,16 +112,18 @@ export default function Endpoints() {
                       </button>
                     </TableCell>
                     <TableCell className="font-medium">{ep.title}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <span className="text-muted-foreground font-mono text-xs">
                         {ep.methods.includes('*') ? 'ANY' : ep.methods.join(',')}
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {isHmac ? <Badge variant="outline">HMAC</Badge> : <Badge variant="secondary">无</Badge>}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{channelSummary(ep)}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-muted-foreground hidden md:table-cell">
+                      {ep.mode === 'reply' ? '直接响应' : channelSummary(ep)}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Switch checked={ep.active} onCheckedChange={() => toggleMutation.mutate(ep.id)} />
                     </TableCell>
                     <TableCell className="text-right">

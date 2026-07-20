@@ -51,6 +51,7 @@ export interface InboundLogRow {
   id: number
   endpointId: number | null
   subpath: string
+  mode: 'forward' | 'reply'
   method: string
   /** 入站请求头（小写键对象），存为 JSON 文本 */
   headers: Record<string, string> | null
@@ -60,7 +61,7 @@ export interface InboundLogRow {
   status: 'received'
   createdAt: string
 }
-export type InboundLogCreate = Omit<InboundLogRow, 'id' | 'createdAt'>
+export type InboundLogCreate = Omit<InboundLogRow, 'id' | 'createdAt' | 'mode'>
 
 /* ---------------- 出站日志（一个入站可对应 N 个出站） ---------------- */
 export interface ForwardLogRow {
@@ -116,13 +117,24 @@ export interface LogFilter {
 
 export interface InboundLogFilter {
   endpointId?: number
-  limit?: number
+  mode?: 'forward' | 'reply'
+  status?: 'success' | 'failed'
+  page?: number
+  pageSize?: number
 }
 
 /** 入站 + 其全部出站（1:N） */
 export interface InboundWithOutbound {
   inbound: InboundLogRow
   outbound: ForwardLogRow[]
+}
+
+export interface InboundLogPage {
+  items: InboundWithOutbound[]
+  page: number
+  pageSize: number
+  total: number
+  hasNext: boolean
 }
 
 export interface Stats {
@@ -156,7 +168,7 @@ export interface Repos {
     /** 写入一条入站日志，返回自增 id（供出站日志关联） */
     addInbound(entry: InboundLogCreate): Promise<number>
     /** 列出入站日志及其全部出站日志（1:N） */
-    listInbound(filter?: InboundLogFilter): Promise<InboundWithOutbound[]>
+    listInbound(filter?: InboundLogFilter): Promise<InboundLogPage>
     stats(): Promise<Stats>
   }
   close(): Promise<void>

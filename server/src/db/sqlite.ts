@@ -10,14 +10,15 @@ import type {
   EndpointUpdate,
   InboundLogCreate,
   InboundLogFilter,
+  InboundLogPage,
   InboundLogRow,
-  InboundWithOutbound,
   LogCreate,
   LogFilter,
   LogRow,
   Repos,
   Stats,
 } from './types'
+import { redactHeaders } from '../services/redact'
 
 /**
  * SQLite 数据访问层实现（bun:sqlite，默认方言）
@@ -77,6 +78,7 @@ interface RawInbound {
   id: number
   endpoint_id: number | null
   subpath: string
+  mode: string | null
   method: string
   headers: string | null
   body: string | null
@@ -128,7 +130,7 @@ function mapLog(r: RawLog): LogRow {
     target: r.target,
     requestUrl: r.request_url,
     requestMethod: r.request_method,
-    requestHeaders: r.request_headers ? JSON.parse(r.request_headers) : null,
+    requestHeaders: redactHeaders(r.request_headers ? JSON.parse(r.request_headers) : null),
     requestBody: r.request_body,
     responseStatus: r.response_status,
     responseBody: r.response_body,
@@ -144,8 +146,9 @@ function mapInbound(r: RawInbound): InboundLogRow {
     id: r.id,
     endpointId: r.endpoint_id,
     subpath: r.subpath,
+    mode: r.mode === 'reply' ? 'reply' : 'forward',
     method: r.method,
-    headers: r.headers ? JSON.parse(r.headers) : null,
+    headers: redactHeaders(r.headers ? JSON.parse(r.headers) : null),
     body: r.body,
     status: r.status as 'received',
     createdAt: r.created_at,
@@ -411,19 +414,32 @@ export function createSqliteRepos(filePath: string): Repos {
           ) as { id: number }
         return r.id
       },
-      async listInbound(filter: InboundLogFilter = {}): Promise<InboundWithOutbound[]> {
+      async listInbound(filter: InboundLogFilter = {}): Promise<InboundLogPage> {
         const where: string[] = []
         const params: (number | string)[] = []
+        const mode = filter.mode ?? 'reply'
+        const page = Math.max(1, Math.floor(filter.page ?? 1))
+        const pageSize = Math.min(100, Math.max(1, Math.floor(filter.pageSize ?? 20)))
         if (filter.endpointId !== undefined) {
           where.push('i.endpoint_id = ?')
           params.push(filter.endpointId)
         }
+        where.push("COALESCE(e.mode, 'forward') = ?")
+        params.push(mode)
+        if (filter.status) {
+          where.push('EXISTS (SELECT 1 FROM forward_logs sf WHERE sf.inbound_log_id = i.id AND sf.status = ?)')
+          params.push(filter.status)
+        }
         const clause = where.length ? `WHERE ${where.join(' AND ')}` : ''
-        const limit = filter.limit ?? 50
+        const from = 'inbound_logs i LEFT JOIN endpoints e ON e.id = i.endpoint_id'
+        const total = (db.query(`SELECT COUNT(*) AS n FROM ${from} ${clause}`).get(...params) as { n: number }).n
+        const offset = (page - 1) * pageSize
         const inbounds = db
-          .query(`SELECT * FROM inbound_logs i ${clause} ORDER BY i.id DESC LIMIT ?`)
-          .all(...params, limit) as RawInbound[]
-        if (inbounds.length === 0) return []
+          .query(
+            `SELECT i.*, COALESCE(e.mode, 'forward') AS mode FROM ${from} ${clause} ORDER BY i.id DESC LIMIT ? OFFSET ?`,
+          )
+          .all(...params, pageSize, offset) as RawInbound[]
+        if (inbounds.length === 0) return { items: [], page, pageSize, total, hasNext: false }
         const ids = inbounds.map(r => r.id)
         const placeholders = ids.map(() => '?').join(',')
         const outbounds = db
@@ -435,7 +451,13 @@ export function createSqliteRepos(filePath: string): Repos {
           if (!byInbound.has(key)) byInbound.set(key, [])
           byInbound.get(key)!.push(mapLog(o))
         }
-        return inbounds.map(i => ({ inbound: mapInbound(i), outbound: byInbound.get(i.id) ?? [] }))
+        return {
+          items: inbounds.map(i => ({ inbound: mapInbound(i), outbound: byInbound.get(i.id) ?? [] })),
+          page,
+          pageSize,
+          total,
+          hasNext: offset + inbounds.length < total,
+        }
       },
       async stats(): Promise<Stats> {
         const endpoints = (db.query('SELECT COUNT(*) AS n FROM endpoints').get() as { n: number }).n

@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth'
 const NAV = [
   { to: '/', label: '仪表盘', icon: LayoutDashboard, end: true },
   { to: '/endpoints', label: '子路径', icon: Webhook, end: false },
-  { to: '/logs', label: '转发日志', icon: ScrollText, end: false },
+  { to: '/logs', label: '入站日志', icon: ScrollText, end: false },
   { to: '/accounts', label: '邮箱账号', icon: Mail, end: false },
 ]
 
@@ -73,14 +73,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* 移动端：顶部栏 */}
-      <div className="glass fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between rounded-none px-4 md:hidden">
+      <div className="glass fixed inset-x-0 top-0 z-30 flex h-14 items-center gap-3 rounded-none px-3 md:hidden">
+        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)} aria-label="打开菜单">
+          <Menu className="h-5 w-5" />
+        </Button>
         <div className="flex items-center gap-2">
           <Webhook className="text-primary h-5 w-5" />
           <span className="font-semibold tracking-tight">转发中心</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(true)} aria-label="打开菜单">
-          <Menu className="h-5 w-5" />
-        </Button>
       </div>
 
       {/* 移动端：抽屉（始终挂载，用 transform/opacity 过渡，滑入 + 遮罩淡入） */}

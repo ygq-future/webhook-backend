@@ -61,4 +61,80 @@ describe('sqlite repos', () => {
     expect(stats.failed).toBe(1)
     await repos.close()
   })
+
+  test('inbound logs filter by mode, paginate, and redact headers', async () => {
+    const repos = createSqliteRepos(':memory:')
+    const forward = await repos.endpoints.create({
+      subpath: 'forward',
+      title: '转发',
+      description: null,
+      active: true,
+      mode: 'forward',
+      methods: ['POST'],
+      parser: null,
+      auth: { type: 'none' },
+      targets: [
+        {
+          channel: 'http',
+          url: 'https://example.com',
+          method: 'POST',
+          contentType: 'json',
+          auth: { type: 'none' },
+          timeoutMs: 5000,
+          retries: 0,
+        },
+      ],
+      reply: null,
+    })
+    const reply = await repos.endpoints.create({
+      subpath: 'reply',
+      title: '心跳',
+      description: null,
+      active: true,
+      mode: 'reply',
+      methods: ['GET'],
+      parser: null,
+      auth: { type: 'none' },
+      targets: [],
+      reply: { status: 200, contentType: 'json', body: '{"ok":true}' },
+    })
+    const forwardInboundId = await repos.logs.addInbound({
+      endpointId: forward.id,
+      subpath: forward.subpath,
+      method: 'POST',
+      headers: { Authorization: 'Bearer secret', 'X-Request-Id': 'req-1' },
+      body: '{}',
+      status: 'received',
+    })
+    await repos.logs.add({
+      endpointId: forward.id,
+      inboundLogId: forwardInboundId,
+      channel: 'http',
+      target: 'POST https://example.com',
+      requestHeaders: { authorization: 'Bearer secret', 'X-Request-Id': 'req-1' },
+      status: 'success',
+      error: null,
+    })
+    await repos.logs.addInbound({
+      endpointId: reply.id,
+      subpath: reply.subpath,
+      method: 'GET',
+      headers: { Cookie: 'session=secret' },
+      body: null,
+      status: 'received',
+    })
+
+    const replies = await repos.logs.listInbound()
+    expect(replies.total).toBe(1)
+    expect(replies.items[0].inbound.mode).toBe('reply')
+    expect(replies.items[0].inbound.headers).toEqual({ Cookie: '[REDACTED]' })
+
+    const forwards = await repos.logs.listInbound({ mode: 'forward', page: 1, pageSize: 1 })
+    expect(forwards.total).toBe(1)
+    expect(forwards.items[0].outbound[0].requestHeaders).toEqual({
+      authorization: '[REDACTED]',
+      'X-Request-Id': 'req-1',
+    })
+    await repos.close()
+  })
 })

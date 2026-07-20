@@ -42,7 +42,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">仪表盘</h1>
-        <p className="text-muted-foreground text-sm">转发概览与最近日志</p>
+        <p className="text-muted-foreground text-sm">转发概览与最近出站日志</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -64,10 +64,10 @@ export default function Dashboard() {
             <TableHeader>
               <TableRow>
                 <TableHead>时间</TableHead>
-                <TableHead>渠道</TableHead>
-                <TableHead>目标</TableHead>
+                <TableHead className="hidden sm:table-cell">渠道</TableHead>
+                <TableHead className="hidden md:table-cell">目标</TableHead>
                 <TableHead>状态</TableHead>
-                <TableHead>详情</TableHead>
+                <TableHead className="hidden lg:table-cell">详情</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -90,8 +90,8 @@ export default function Dashboard() {
                   <TableCell className="text-muted-foreground whitespace-nowrap">
                     {new Date(log.createdAt).toLocaleString('zh-CN')}
                   </TableCell>
-                  <TableCell>{log.channel ?? '-'}</TableCell>
-                  <TableCell className="max-w-[220px] truncate">{log.target ?? '-'}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{log.channel ?? '-'}</TableCell>
+                  <TableCell className="hidden max-w-[220px] truncate md:table-cell">{log.target ?? '-'}</TableCell>
                   <TableCell>
                     {log.status === 'success' ? (
                       <Badge variant="success">成功</Badge>
@@ -99,7 +99,9 @@ export default function Dashboard() {
                       <Badge variant="destructive">失败</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground max-w-[240px] truncate">{log.error ?? '-'}</TableCell>
+                  <TableCell className="text-muted-foreground hidden max-w-[240px] truncate lg:table-cell">
+                    {log.error ?? '-'}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

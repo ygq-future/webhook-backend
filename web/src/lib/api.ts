@@ -57,6 +57,7 @@ export interface InboundLogRow {
   id: number
   endpointId: number | null
   subpath: string
+  mode: 'forward' | 'reply'
   method: string
   headers: Record<string, string> | null
   body: string | null
@@ -67,6 +68,14 @@ export interface InboundLogRow {
 export interface InboundWithOutbound {
   inbound: InboundLogRow
   outbound: LogRow[]
+}
+
+export interface InboundLogPage {
+  items: InboundWithOutbound[]
+  page: number
+  pageSize: number
+  total: number
+  hasNext: boolean
 }
 
 export interface Parser {
@@ -189,12 +198,21 @@ export const statsApi = {
     return request<LogRow[]>(`/stats/logs${qs ? `?${qs}` : ''}`)
   },
   /** 入站日志 + 其全部出站日志（1:N） */
-  inbound: (params?: { endpointId?: number; limit?: number }) => {
+  inbound: (params?: {
+    endpointId?: number
+    mode?: 'forward' | 'reply'
+    status?: 'success' | 'failed'
+    page?: number
+    pageSize?: number
+  }) => {
     const q = new URLSearchParams()
     if (params?.endpointId) q.set('endpointId', String(params.endpointId))
-    if (params?.limit) q.set('limit', String(params.limit))
+    if (params?.mode) q.set('mode', params.mode)
+    if (params?.status) q.set('status', params.status)
+    if (params?.page) q.set('page', String(params.page))
+    if (params?.pageSize) q.set('pageSize', String(params.pageSize))
     const qs = q.toString()
-    return request<InboundWithOutbound[]>(`/stats/inbound${qs ? `?${qs}` : ''}`)
+    return request<InboundLogPage>(`/stats/inbound${qs ? `?${qs}` : ''}`)
   },
 }
 

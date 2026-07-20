@@ -10,6 +10,11 @@ import { requireAuth } from '../middleware/auth'
 export const statsRouter = new Hono()
 statsRouter.use('*', requireAuth)
 
+function positiveInt(value: string | undefined, fallback: number): number {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
 statsRouter.get('/', async c => {
   const repos = await getRepos()
   const stats = await repos.logs.stats()
@@ -33,10 +38,16 @@ statsRouter.get('/logs', async c => {
 statsRouter.get('/inbound', async c => {
   const repos = await getRepos()
   const endpointId = c.req.query('endpointId')
-  const limit = c.req.query('limit')
+  const mode = c.req.query('mode')
+  const status = c.req.query('status')
+  const page = c.req.query('page')
+  const pageSize = c.req.query('pageSize')
   const data = await repos.logs.listInbound({
     endpointId: endpointId ? Number(endpointId) : undefined,
-    limit: limit ? Number(limit) : undefined,
+    mode: mode === 'forward' || mode === 'reply' ? mode : 'reply',
+    status: status === 'success' || status === 'failed' ? status : undefined,
+    page: positiveInt(page, 1),
+    pageSize: positiveInt(pageSize, 20),
   })
   return c.json(data)
 })

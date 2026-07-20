@@ -7,14 +7,15 @@ import type {
   EndpointUpdate,
   InboundLogCreate,
   InboundLogFilter,
+  InboundLogPage,
   InboundLogRow,
-  InboundWithOutbound,
   LogCreate,
   LogFilter,
   LogRow,
   Repos,
   Stats,
 } from './types'
+import { redactHeaders } from '../services/redact'
 
 /**
  * PostgreSQL 数据访问层实现（postgres.js）
@@ -77,6 +78,7 @@ interface RawInbound {
   id: number
   endpoint_id: number | null
   subpath: string
+  mode: 'forward' | 'reply' | null
   method: string
   headers: Record<string, string> | null
   body: string | null
@@ -130,7 +132,7 @@ function mapLog(r: RawLog): LogRow {
     target: r.target,
     requestUrl: r.request_url,
     requestMethod: r.request_method,
-    requestHeaders: r.request_headers,
+    requestHeaders: redactHeaders(r.request_headers),
     requestBody: r.request_body,
     responseStatus: r.response_status,
     responseBody: r.response_body,
@@ -146,8 +148,9 @@ function mapInbound(r: RawInbound): InboundLogRow {
     id: r.id,
     endpointId: r.endpoint_id,
     subpath: r.subpath,
+    mode: r.mode === 'reply' ? 'reply' : 'forward',
     method: r.method,
-    headers: r.headers,
+    headers: redactHeaders(r.headers),
     body: r.body,
     status: r.status as 'received',
     createdAt: iso(r.created_at),
@@ -358,13 +361,27 @@ export async function createPgRepos(url: string): Promise<Repos> {
           RETURNING id`
         return r.id
       },
-      async listInbound(filter: InboundLogFilter = {}): Promise<InboundWithOutbound[]> {
-        const limit = filter.limit ?? 50
+      async listInbound(filter: InboundLogFilter = {}): Promise<InboundLogPage> {
+        const mode = filter.mode ?? 'reply'
+        const page = Math.max(1, Math.floor(filter.page ?? 1))
+        const pageSize = Math.min(100, Math.max(1, Math.floor(filter.pageSize ?? 20)))
+        const offset = (page - 1) * pageSize
+        const modeFilter = sql`AND COALESCE(e.mode, 'forward') = ${mode}`
+        const statusFilter = filter.status
+          ? sql`AND EXISTS (SELECT 1 FROM forward_logs sf WHERE sf.inbound_log_id = i.id AND sf.status = ${filter.status})`
+          : sql``
+        const [{ total }] = await sql<{ total: number }[]>`
+          SELECT COUNT(*)::int AS total FROM inbound_logs i
+          LEFT JOIN endpoints e ON e.id = i.endpoint_id
+          WHERE ${filter.endpointId !== undefined ? sql`i.endpoint_id = ${filter.endpointId}` : sql`TRUE`}
+          ${modeFilter} ${statusFilter}`
         const inbounds = await sql<RawInbound[]>`
-          SELECT * FROM inbound_logs
-          WHERE ${filter.endpointId !== undefined ? sql`endpoint_id = ${filter.endpointId}` : sql`TRUE`}
-          ORDER BY id DESC LIMIT ${limit}`
-        if (inbounds.length === 0) return []
+          SELECT i.*, COALESCE(e.mode, 'forward') AS mode FROM inbound_logs i
+          LEFT JOIN endpoints e ON e.id = i.endpoint_id
+          WHERE ${filter.endpointId !== undefined ? sql`i.endpoint_id = ${filter.endpointId}` : sql`TRUE`}
+          ${modeFilter} ${statusFilter}
+          ORDER BY i.id DESC LIMIT ${pageSize} OFFSET ${offset}`
+        if (inbounds.length === 0) return { items: [], page, pageSize, total, hasNext: false }
         const ids = inbounds.map(r => r.id)
         const outbounds = await sql<RawLog[]>`
           SELECT * FROM forward_logs WHERE inbound_log_id IN ${sql(ids)} ORDER BY id ASC`
@@ -374,7 +391,13 @@ export async function createPgRepos(url: string): Promise<Repos> {
           if (!byInbound.has(key)) byInbound.set(key, [])
           byInbound.get(key)!.push(mapLog(o))
         }
-        return inbounds.map(i => ({ inbound: mapInbound(i), outbound: byInbound.get(i.id) ?? [] }))
+        return {
+          items: inbounds.map(i => ({ inbound: mapInbound(i), outbound: byInbound.get(i.id) ?? [] })),
+          page,
+          pageSize,
+          total,
+          hasNext: offset + inbounds.length < total,
+        }
       },
       async stats(): Promise<Stats> {
         const [{ n: endpoints }] = await sql<{ n: number }[]>`SELECT COUNT(*)::int AS n FROM endpoints`

@@ -215,9 +215,9 @@ export default function Accounts() {
             <TableHeader>
               <TableRow>
                 <TableHead>名称</TableHead>
-                <TableHead>服务商</TableHead>
+                <TableHead className="hidden sm:table-cell">服务商</TableHead>
                 <TableHead>邮箱</TableHead>
-                <TableHead>SMTP</TableHead>
+                <TableHead className="hidden md:table-cell">SMTP</TableHead>
                 <TableHead>授权码</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -240,9 +240,9 @@ export default function Accounts() {
               {data?.map(a => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.name}</TableCell>
-                  <TableCell>{PROVIDER_LABEL[a.provider] ?? a.provider}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{PROVIDER_LABEL[a.provider] ?? a.provider}</TableCell>
                   <TableCell>{a.email}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground hidden md:table-cell">
                     {a.host}:{a.port}
                     {a.secure ? ' (SSL)' : ''}
                     {a.proxy ? <div className="text-xs text-white/50">代理已配置</div> : null}
