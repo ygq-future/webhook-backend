@@ -133,7 +133,7 @@ export default function Endpoints() {
                           aria-label={ep.active ? '禁用子路径' : '启用子路径'}
                         />
                         <span
-                          className={ep.active ? 'text-xs font-medium text-cyan-200' : 'text-muted-foreground text-xs'}>
+                          className={ep.active ? 'text-xs font-medium text-white' : 'text-muted-foreground text-xs'}>
                           {ep.active ? '已启用' : '已停用'}
                         </span>
                       </div>

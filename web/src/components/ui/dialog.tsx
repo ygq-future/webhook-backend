@@ -51,7 +51,7 @@ function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
   return (
     <div
       className={cn(
-        'flex shrink-0 flex-col space-y-1.5 border-b border-white/10 bg-slate-950/55 px-5 pt-5 pb-4 text-left backdrop-blur-xl sm:px-6 sm:pt-6',
+        'flex shrink-0 flex-col space-y-1.5 border-b border-white/10 bg-neutral-950/55 px-5 pt-5 pb-4 text-left backdrop-blur-xl sm:px-6 sm:pt-6',
         className,
       )}
       {...props}

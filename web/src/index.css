@@ -2,42 +2,41 @@
 @import 'tw-animate-css';
 
 /* =============================================================
- * 深海青玻璃主题
- * 设计要点：用青绿/靛蓝光源制造可辨识的折射层，玻璃面板保持有色而非白色透明，
- * 让背景光晕、内描边和阴影共同形成深度。
+ * shadcn 黑白 + Glassmorphism
+ * 背景负责提供可被模糊的灰白光影，组件只使用中性透明层、白色描边与内高光。
  * ============================================================= */
 :root {
   --radius: 1rem;
 
-  /* 玻璃材质 token */
-  --glass-bg: rgba(7, 34, 48, 0.64);
-  --glass-bg-strong: rgba(8, 39, 57, 0.82);
-  --glass-border: rgba(96, 230, 224, 0.24);
-  --glass-border-strong: rgba(120, 245, 235, 0.46);
-  --glass-sheen: rgba(183, 255, 244, 0.34); /* 顶部高光内描边 */
+  /* 中性玻璃材质 token */
+  --glass-bg: rgba(10, 10, 10, 0.48);
+  --glass-bg-strong: rgba(10, 10, 10, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-border-strong: rgba(255, 255, 255, 0.28);
+  --glass-sheen: rgba(255, 255, 255, 0.22);
 
-  /* 基础色：极简黑白 */
-  --background: #0e0f12; /* 仅小部件（如开关滑块）需要不透明底时使用 */
-  --foreground: oklch(0.97 0 0); /* 近白文字 */
+  /* shadcn dark 中性色阶 */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
   --card: var(--glass-bg);
   --card-foreground: var(--foreground);
-  --popover: rgba(18, 20, 24, 0.9);
+  --popover: rgba(10, 10, 10, 0.9);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.82 0.045 224); /* 冷蓝灰，避免白色按钮抢焦 */
-  --primary-foreground: oklch(0.16 0.025 228);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
 
-  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary: rgba(255, 255, 255, 0.08);
   --secondary-foreground: var(--foreground);
-  --muted: rgba(255, 255, 255, 0.05);
-  --muted-foreground: oklch(0.64 0 0); /* 中灰 */
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: oklch(0.708 0 0);
   --accent: rgba(255, 255, 255, 0.1);
   --accent-foreground: var(--foreground);
 
-  --destructive: oklch(0.62 0.19 25); /* 克制的红 */
-  --border: rgba(255, 255, 255, 0.1);
-  --input: transparent;
-  --ring: oklch(0.95 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -69,40 +68,40 @@
 @utility glass {
   background-color: var(--glass-bg);
   background-image:
-    linear-gradient(118deg, rgba(65, 239, 218, 0.22), rgba(79, 127, 255, 0.1) 34%, transparent 62%),
-    linear-gradient(180deg, rgba(207, 255, 249, 0.13), rgba(255, 255, 255, 0.025) 42%, rgba(1, 18, 31, 0.22));
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.025) 38%, transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 46%, rgba(0, 0, 0, 0.16));
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(28px) saturate(165%) brightness(1.08) contrast(1.05);
-  -webkit-backdrop-filter: blur(28px) saturate(165%) brightness(1.08) contrast(1.05);
+  backdrop-filter: blur(26px) saturate(70%) contrast(1.12);
+  -webkit-backdrop-filter: blur(26px) saturate(70%) contrast(1.12);
   box-shadow:
     inset 0 1px 0 var(--glass-sheen),
-    inset 1px 0 0 rgba(218, 236, 255, 0.08),
-    inset 0 -1px 0 rgba(2, 9, 23, 0.34),
-    0 20px 52px rgba(0, 0, 0, 0.34),
-    0 2px 10px rgba(32, 214, 196, 0.14);
+    inset 1px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.46),
+    0 24px 64px rgba(0, 0, 0, 0.38),
+    0 1px 2px rgba(255, 255, 255, 0.05);
 }
 @utility glass-soft {
-  background-color: rgba(7, 31, 45, 0.5);
+  background-color: rgba(18, 18, 18, 0.4);
   background-image:
-    linear-gradient(132deg, rgba(65, 239, 218, 0.14), rgba(91, 114, 242, 0.07) 38%, transparent 70%),
-    linear-gradient(180deg, rgba(211, 255, 249, 0.09), rgba(255, 255, 255, 0.015) 55%);
-  border: 1px solid rgba(96, 230, 224, 0.2);
-  backdrop-filter: blur(20px) saturate(155%) brightness(1.06);
-  -webkit-backdrop-filter: blur(20px) saturate(155%) brightness(1.06);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.015) 45%, transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 58%);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  backdrop-filter: blur(18px) saturate(70%) contrast(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(70%) contrast(1.08);
   box-shadow:
-    inset 0 1px 0 rgba(231, 244, 255, 0.19),
-    inset 0 -1px 0 rgba(1, 8, 21, 0.26),
-    0 12px 30px rgba(0, 0, 0, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.34),
+    0 12px 32px rgba(0, 0, 0, 0.2);
 }
 
 /* 抽屉使用更重的雾化层：侧栏下方的背景细节会被明显打散，而非仅叠一层透明色。 */
 .frosted-drawer {
-  background-color: rgba(7, 17, 33, 0.48) !important;
+  background-color: rgba(8, 8, 8, 0.58) !important;
   background-image:
-    linear-gradient(145deg, rgba(204, 229, 255, 0.2), rgba(121, 154, 255, 0.06) 42%, rgba(5, 12, 27, 0.28)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 35%) !important;
-  backdrop-filter: blur(48px) saturate(185%) brightness(1.12) contrast(1.1) !important;
-  -webkit-backdrop-filter: blur(48px) saturate(185%) brightness(1.12) contrast(1.1) !important;
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%, rgba(0, 0, 0, 0.24)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 35%) !important;
+  backdrop-filter: blur(42px) saturate(65%) contrast(1.15) !important;
+  -webkit-backdrop-filter: blur(42px) saturate(65%) contrast(1.15) !important;
 }
 
 /* 弹窗只动画合成层属性；避免 zoom 改变表单布局，降低大面板首次打开时的卡顿。 */
@@ -156,11 +155,11 @@
   .mobile-data-cards tbody tr {
     margin-bottom: 0.65rem;
     overflow: hidden;
-    border: 1px solid rgba(196, 222, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 1rem;
-    background: rgba(9, 20, 37, 0.42);
+    background: rgba(12, 12, 12, 0.42);
     box-shadow:
-      inset 0 1px 0 rgba(231, 244, 255, 0.13),
+      inset 0 1px 0 rgba(255, 255, 255, 0.11),
       0 10px 24px rgba(0, 0, 0, 0.16);
   }
   .mobile-data-cards tbody tr:last-child {
@@ -172,7 +171,7 @@
     gap: 0.75rem;
     align-items: center;
     padding: 0.65rem 0.8rem;
-    border-bottom: 1px solid rgba(196, 222, 255, 0.09);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
   .mobile-data-cards tbody td:last-child {
     border-bottom: 0;
@@ -213,6 +212,7 @@
   }
   html {
     color-scheme: dark;
+    background: #050505;
   }
 
   /* 自定义滚动条：透明轨道 + 细圆角半透明滑块，简洁不抢眼 */
@@ -251,16 +251,15 @@
       'PingFang SC',
       'Microsoft YaHei',
       sans-serif;
-    /* 近黑底色 + 更明显的辉光层次（黑白为主，仅极淡中性冷光帮助玻璃折射）。
-       背景越有层次，backdrop-blur 的磨砂质感越清晰可见。 */
-    background-color: #0a0b0d;
+    /* 纯中性背景：灰白光斑、环形眩晕与网格为 backdrop-filter 提供可见参照。 */
+    background-color: #050505;
     background-image:
-      radial-gradient(34rem 34rem at 4% -12%, rgba(38, 104, 199, 0.34), transparent 54%),
-      radial-gradient(30rem 30rem at 104% 5%, rgba(115, 65, 204, 0.31), transparent 55%),
-      radial-gradient(38rem 36rem at 48% 112%, rgba(15, 140, 168, 0.24), transparent 57%),
-      repeating-linear-gradient(90deg, rgba(178, 214, 255, 0.045) 0 1px, transparent 1px 5.75rem),
-      repeating-linear-gradient(0deg, rgba(178, 214, 255, 0.035) 0 1px, transparent 1px 5.75rem),
-      linear-gradient(135deg, #050b16 0%, #07101e 47%, #100b24 100%);
+      radial-gradient(32rem 26rem at -4% -8%, rgba(255, 255, 255, 0.16), transparent 62%),
+      radial-gradient(26rem 34rem at 108% 8%, rgba(255, 255, 255, 0.11), transparent 66%),
+      radial-gradient(44rem 24rem at 50% 112%, rgba(255, 255, 255, 0.09), transparent 64%),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 5.75rem),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 5.75rem),
+      linear-gradient(145deg, #030303 0%, #0d0d0d 48%, #050505 100%);
     background-attachment: fixed;
     min-height: 100vh;
     isolation: isolate;
@@ -272,11 +271,23 @@
     inset: -16vmax;
     pointer-events: none;
     background:
-      linear-gradient(116deg, transparent 19%, rgba(114, 177, 255, 0.21) 30%, transparent 42%),
-      linear-gradient(296deg, transparent 38%, rgba(180, 108, 255, 0.2) 52%, transparent 64%),
-      radial-gradient(circle at 20% 62%, rgba(86, 207, 232, 0.22) 0 7%, transparent 23%),
-      radial-gradient(circle at 78% 35%, rgba(153, 112, 255, 0.25) 0 9%, transparent 26%);
-    filter: blur(24px) saturate(135%);
-    transform: translateZ(0);
+      repeating-radial-gradient(ellipse at 18% 60%, rgba(255, 255, 255, 0.11) 0 1px, transparent 2px 42px),
+      repeating-radial-gradient(ellipse at 82% 28%, rgba(255, 255, 255, 0.08) 0 1px, transparent 2px 52px),
+      radial-gradient(circle at 22% 62%, rgba(255, 255, 255, 0.14) 0 6%, transparent 24%),
+      radial-gradient(circle at 78% 34%, rgba(255, 255, 255, 0.11) 0 8%, transparent 26%);
+    filter: blur(18px);
+    transform: rotate(-5deg) translateZ(0);
+    opacity: 0.8;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 4px),
+      radial-gradient(circle at 50% 30%, transparent 0 28%, rgba(0, 0, 0, 0.3) 78%);
+    opacity: 0.7;
   }
 }

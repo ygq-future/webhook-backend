@@ -28,7 +28,7 @@ function StatusBadge({ ok, label }: { ok: boolean; label?: string }) {
     <span
       className={
         ok
-          ? 'rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300'
+          ? 'rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs font-medium text-white'
           : 'rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-300'
       }>
       {label ?? (ok ? '成功' : '失败')}
@@ -93,7 +93,7 @@ function OutboundCard({ log }: { log: LogRow }) {
       <Block title="出站响应">
         <div className="text-sm">
           {log.responseStatus != null ? (
-            <span className={ok ? 'text-emerald-300' : 'text-red-300'}>状态码 {log.responseStatus}</span>
+            <span className={ok ? 'text-white' : 'text-red-300'}>状态码 {log.responseStatus}</span>
           ) : (
             <span className="text-red-300">无响应（网络/超时错误）</span>
           )}

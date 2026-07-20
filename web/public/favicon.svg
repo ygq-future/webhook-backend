@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0d5368"/>
-      <stop offset="1" stop-color="#102459"/>
+      <stop stop-color="#3a3a3a"/>
+      <stop offset="1" stop-color="#090909"/>
     </linearGradient>
     <linearGradient id="glow" x1="17" y1="15" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#9affed"/>
-      <stop offset="1" stop-color="#26d9df"/>
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#a3a3a3"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="17" fill="#061522"/>
-  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)" stroke="#72f4e5" stroke-opacity=".55" stroke-width="2"/>
+  <rect width="64" height="64" rx="17" fill="#050505"/>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)" stroke="#ffffff" stroke-opacity=".55" stroke-width="2"/>
   <path d="M18 22h13a10 10 0 0 1 0 20H18" fill="none" stroke="url(#glow)" stroke-linecap="round" stroke-width="7"/>
-  <path d="M46 22H33a10 10 0 0 0 0 20h13" fill="none" stroke="#b8fff4" stroke-linecap="round" stroke-width="7"/>
-  <path d="M23 32h18" stroke="#061522" stroke-linecap="round" stroke-width="4"/>
+  <path d="M46 22H33a10 10 0 0 0 0 20h13" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="7"/>
+  <path d="M23 32h18" stroke="#050505" stroke-linecap="round" stroke-width="4"/>
 </svg>

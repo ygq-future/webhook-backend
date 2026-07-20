@@ -48,7 +48,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="子路径" value={data?.endpoints ?? 0} icon={Webhook} />
         <StatCard label="邮箱账号" value={data?.accounts ?? 0} icon={Mail} />
-        <StatCard label="转发成功" value={data?.success ?? 0} icon={CheckCircle2} tone="text-emerald-500" />
+        <StatCard label="转发成功" value={data?.success ?? 0} icon={CheckCircle2} tone="text-white" />
         <StatCard label="转发失败" value={data?.failed ?? 0} icon={XCircle} tone="text-destructive" />
       </div>
 
