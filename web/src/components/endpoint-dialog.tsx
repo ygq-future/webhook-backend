@@ -440,7 +440,7 @@ export function EndpointDialog({
         <DialogHeader>
           <DialogTitle>{editing ? '编辑子路径' : '新建子路径'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={submit} className="min-w-0 space-y-5">
+        <form onSubmit={submit} className="min-w-0 space-y-5 overflow-y-auto px-5 pt-5 pb-5 sm:px-6">
           {/* 基本信息 */}
           <section className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

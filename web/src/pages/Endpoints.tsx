@@ -126,7 +126,17 @@ export default function Endpoints() {
                       {ep.mode === 'reply' ? '直接响应' : channelSummary(ep)}
                     </TableCell>
                     <TableCell data-label="启用">
-                      <Switch checked={ep.active} onCheckedChange={() => toggleMutation.mutate(ep.id)} />
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={ep.active}
+                          onCheckedChange={() => toggleMutation.mutate(ep.id)}
+                          aria-label={ep.active ? '禁用子路径' : '启用子路径'}
+                        />
+                        <span
+                          className={ep.active ? 'text-xs font-medium text-cyan-200' : 'text-muted-foreground text-xs'}>
+                          {ep.active ? '已启用' : '已停用'}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell data-label="操作" className="text-right">
                       <div className="flex justify-end gap-1">

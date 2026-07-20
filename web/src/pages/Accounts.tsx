@@ -96,7 +96,7 @@ function AccountDialog({
         <DialogHeader>
           <DialogTitle>{editing ? '编辑邮箱账号' : '新增邮箱账号'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4 overflow-y-auto px-5 pt-5 pb-5 sm:px-6">
           <div className="space-y-2">
             <Label>名称</Label>
             <Input

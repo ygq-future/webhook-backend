@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Webhook, Mail, ScrollText, LogOut, Menu, X } from 'lucide-react'
 
@@ -57,6 +57,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [drawerOffset, setDrawerOffset] = useState(0)
   const [draggingDrawer, setDraggingDrawer] = useState(false)
   const drawerTouch = useRef<{ pointerId: number; startX: number } | null>(null)
+
+  useEffect(() => {
+    if (!mobileOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.body.classList.add('mobile-drawer-open')
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.body.classList.remove('mobile-drawer-open')
+    }
+  }, [mobileOpen])
 
   function closeMobileMenu() {
     drawerTouch.current = null
@@ -127,7 +138,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       />
       <aside
         className={cn(
-          'frosted-drawer glass fixed top-0 left-0 z-50 flex h-full w-64 touch-pan-y flex-col rounded-none transition-transform duration-300 ease-out md:hidden',
+          'frosted-drawer glass fixed top-0 left-0 z-50 flex h-full w-64 touch-pan-y flex-col overflow-y-auto overscroll-contain rounded-none transition-transform duration-300 ease-out md:hidden',
           mobileOpen ? '' : '-translate-x-full',
           draggingDrawer && 'transition-none',
         )}

@@ -33,7 +33,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'glass text-card-foreground fixed top-1/2 left-1/2 z-50 grid max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl min-w-0 -translate-x-1/2 -translate-y-1/2 gap-4 overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-0 p-5 will-change-[opacity,scale] data-[state=closed]:animate-[wh-dialog-out_0.16s_ease-in_forwards] data-[state=open]:animate-[wh-dialog-in_0.24s_cubic-bezier(0.22,1,0.36,1)_both] sm:w-full sm:p-6',
+        'glass text-card-foreground fixed top-1/2 left-1/2 z-50 flex max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl min-w-0 -translate-x-1/2 -translate-y-1/2 flex-col gap-0 overflow-hidden rounded-[1.35rem] border-0 p-0 will-change-[opacity,scale] data-[state=closed]:animate-[wh-dialog-out_0.16s_ease-in_forwards] data-[state=open]:animate-[wh-dialog-in_0.24s_cubic-bezier(0.22,1,0.36,1)_both] sm:w-full',
         className,
       )}
       {...props}>
@@ -48,7 +48,15 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('flex flex-col space-y-1.5 text-left', className)} {...props} />
+  return (
+    <div
+      className={cn(
+        'flex shrink-0 flex-col space-y-1.5 border-b border-white/10 bg-slate-950/55 px-5 pt-5 pb-4 text-left backdrop-blur-xl sm:px-6 sm:pt-6',
+        className,
+      )}
+      {...props}
+    />
+  )
 }
 DialogHeader.displayName = 'DialogHeader'
 
