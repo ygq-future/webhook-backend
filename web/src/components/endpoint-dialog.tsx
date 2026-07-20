@@ -361,6 +361,8 @@ export function EndpointDialog({
   const [form, setForm] = React.useState<FormState>(EMPTY)
   const [showJson, setShowJson] = React.useState(false)
   const [tryIt, setTryIt] = React.useState<Record<number, boolean>>({})
+  const subpathRef = React.useRef<HTMLInputElement>(null)
+  const titleRef = React.useRef<HTMLInputElement>(null)
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }))
 
   React.useEffect(() => {
@@ -429,7 +431,12 @@ export function EndpointDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent
+        className="max-w-2xl"
+        onOpenAutoFocus={e => {
+          e.preventDefault()
+          requestAnimationFrame(() => (editing ? titleRef.current : subpathRef.current)?.focus({ preventScroll: true }))
+        }}>
         <DialogHeader>
           <DialogTitle>{editing ? '编辑子路径' : '新建子路径'}</DialogTitle>
         </DialogHeader>
@@ -442,6 +449,7 @@ export function EndpointDialog({
                   子路径 <span className="text-muted-foreground">/wh/…</span>
                 </Label>
                 <Input
+                  ref={subpathRef}
                   value={form.subpath}
                   onChange={e => set('subpath', e.target.value)}
                   placeholder="sms"
@@ -450,7 +458,12 @@ export function EndpointDialog({
               </div>
               <div className="space-y-2">
                 <Label>标题</Label>
-                <Input value={form.title} onChange={e => set('title', e.target.value)} placeholder="短信转发" />
+                <Input
+                  ref={titleRef}
+                  value={form.title}
+                  onChange={e => set('title', e.target.value)}
+                  placeholder="短信转发"
+                />
               </div>
             </div>
             <div className="space-y-2">
@@ -520,14 +533,31 @@ export function EndpointDialog({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>响应体</Label>
-                  <Textarea
-                    value={form.replyBody}
-                    onChange={e => set('replyBody', e.target.value)}
-                    className="font-mono text-xs"
-                    rows={5}
-                    placeholder={form.replyContentType === 'json' ? '{"ok":true}' : 'OK'}
-                  />
+                  <Label>
+                    响应体{form.replyContentType === 'json' ? '（JSON，支持 {{变量}}）' : '（支持 {{变量}}）'}
+                  </Label>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    可直接引用请求体根字段（如 <code className="rounded bg-white/10 px-1">{'{{message}}'}</code>）、
+                    <code className="rounded bg-white/10 px-1">{'{{body.message}}'}</code>
+                    ，以及下方「字段映射」定义的变量。
+                  </p>
+                  {form.replyContentType === 'json' ? (
+                    <JsonEditor
+                      value={form.replyBody}
+                      onChange={v => set('replyBody', v)}
+                      tolerant
+                      minHeight="140px"
+                      placeholder='{"ok":true,"message":"{{message}}"}'
+                    />
+                  ) : (
+                    <Textarea
+                      value={form.replyBody}
+                      onChange={e => set('replyBody', e.target.value)}
+                      className="font-mono text-xs"
+                      rows={5}
+                      placeholder="OK {{message}}"
+                    />
+                  )}
                 </div>
               </div>
             )}

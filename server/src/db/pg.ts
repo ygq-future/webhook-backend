@@ -362,7 +362,7 @@ export async function createPgRepos(url: string): Promise<Repos> {
         return r.id
       },
       async listInbound(filter: InboundLogFilter = {}): Promise<InboundLogPage> {
-        const mode = filter.mode ?? 'reply'
+        const mode = filter.mode ?? 'forward'
         const page = Math.max(1, Math.floor(filter.page ?? 1))
         const pageSize = Math.min(100, Math.max(1, Math.floor(filter.pageSize ?? 20)))
         const offset = (page - 1) * pageSize

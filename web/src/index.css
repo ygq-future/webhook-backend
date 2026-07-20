@@ -11,11 +11,11 @@
   --radius: 1rem;
 
   /* 玻璃材质 token */
-  --glass-bg: rgba(15, 22, 35, 0.72);
-  --glass-bg-strong: rgba(18, 27, 42, 0.84);
-  --glass-border: rgba(190, 214, 238, 0.2);
-  --glass-border-strong: rgba(203, 226, 248, 0.32);
-  --glass-sheen: rgba(221, 237, 255, 0.2); /* 顶部高光内描边 */
+  --glass-bg: rgba(8, 17, 31, 0.56);
+  --glass-bg-strong: rgba(11, 23, 41, 0.72);
+  --glass-border: rgba(196, 222, 255, 0.2);
+  --glass-border-strong: rgba(213, 233, 255, 0.38);
+  --glass-sheen: rgba(236, 246, 255, 0.28); /* 顶部高光内描边 */
 
   /* 基础色：极简黑白 */
   --background: #0e0f12; /* 仅小部件（如开关滑块）需要不透明底时使用 */
@@ -70,27 +70,30 @@
 @utility glass {
   background-color: var(--glass-bg);
   background-image:
-    linear-gradient(125deg, rgba(198, 224, 255, 0.1), rgba(198, 224, 255, 0) 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 42%);
+    linear-gradient(118deg, rgba(182, 219, 255, 0.19), rgba(129, 167, 255, 0.055) 30%, transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.025) 42%, rgba(1, 8, 22, 0.08));
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(36px) saturate(155%);
-  -webkit-backdrop-filter: blur(36px) saturate(155%);
+  backdrop-filter: blur(28px) saturate(165%) brightness(1.08) contrast(1.05);
+  -webkit-backdrop-filter: blur(28px) saturate(165%) brightness(1.08) contrast(1.05);
   box-shadow:
     inset 0 1px 0 var(--glass-sheen),
-    inset 0 0 0 1px rgba(190, 214, 238, 0.035),
-    0 24px 72px rgba(0, 0, 0, 0.38);
+    inset 1px 0 0 rgba(218, 236, 255, 0.08),
+    inset 0 -1px 0 rgba(2, 9, 23, 0.34),
+    0 20px 52px rgba(0, 0, 0, 0.34),
+    0 2px 7px rgba(43, 103, 187, 0.12);
 }
 @utility glass-soft {
-  background-color: rgba(14, 21, 32, 0.58);
+  background-color: rgba(10, 22, 39, 0.4);
   background-image:
-    linear-gradient(145deg, rgba(176, 211, 246, 0.09), rgba(176, 211, 246, 0) 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 52%);
-  border: 1px solid rgba(190, 214, 238, 0.16);
-  backdrop-filter: blur(28px) saturate(145%);
-  -webkit-backdrop-filter: blur(28px) saturate(145%);
+    linear-gradient(132deg, rgba(167, 211, 255, 0.14), rgba(113, 140, 235, 0.04) 38%, transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.015) 55%);
+  border: 1px solid rgba(196, 222, 255, 0.16);
+  backdrop-filter: blur(20px) saturate(155%) brightness(1.06);
+  -webkit-backdrop-filter: blur(20px) saturate(155%) brightness(1.06);
   box-shadow:
-    inset 0 1px 0 rgba(221, 237, 255, 0.08),
-    0 10px 30px rgba(0, 0, 0, 0.14);
+    inset 0 1px 0 rgba(231, 244, 255, 0.19),
+    inset 0 -1px 0 rgba(1, 8, 21, 0.26),
+    0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
 /* 弹窗只动画合成层属性；避免 zoom 改变表单布局，降低大面板首次打开时的卡顿。 */
@@ -123,6 +126,62 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* 窄屏下把同一张表转为带字段名的数据卡：不丢字段，避免横向挤压。 */
+@media (max-width: 767px) {
+  .mobile-data-cards,
+  .mobile-data-cards tbody,
+  .mobile-data-cards tr,
+  .mobile-data-cards td {
+    display: block;
+    width: 100%;
+  }
+  .mobile-data-cards thead {
+    display: none;
+  }
+  .mobile-data-cards tbody {
+    padding: 0.65rem;
+  }
+  .mobile-data-cards tbody tr {
+    margin-bottom: 0.65rem;
+    overflow: hidden;
+    border: 1px solid rgba(196, 222, 255, 0.16);
+    border-radius: 1rem;
+    background: rgba(9, 20, 37, 0.42);
+    box-shadow:
+      inset 0 1px 0 rgba(231, 244, 255, 0.13),
+      0 10px 24px rgba(0, 0, 0, 0.16);
+  }
+  .mobile-data-cards tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .mobile-data-cards tbody td {
+    display: grid;
+    grid-template-columns: minmax(4.4rem, 0.42fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid rgba(196, 222, 255, 0.09);
+  }
+  .mobile-data-cards tbody td:last-child {
+    border-bottom: 0;
+  }
+  .mobile-data-cards tbody td::before {
+    content: attr(data-label);
+    color: var(--muted-foreground);
+    font-size: 0.72rem;
+    line-height: 1.45rem;
+  }
+  .mobile-data-cards tbody td[data-label='操作'] > div {
+    justify-content: flex-start;
+  }
+  .mobile-data-cards tbody td[colspan] {
+    display: block;
+    text-align: center;
+  }
+  .mobile-data-cards tbody td[colspan]::before {
+    display: none;
   }
 }
 
@@ -174,12 +233,26 @@
        背景越有层次，backdrop-blur 的磨砂质感越清晰可见。 */
     background-color: #0a0b0d;
     background-image:
-      radial-gradient(38rem 38rem at 5% -8%, rgba(74, 129, 190, 0.24), transparent 58%),
-      radial-gradient(42rem 42rem at 105% 4%, rgba(79, 69, 145, 0.19), transparent 56%),
-      radial-gradient(46rem 46rem at 50% 112%, rgba(35, 93, 135, 0.2), transparent 60%),
-      radial-gradient(30rem 30rem at 82% 62%, rgba(44, 111, 130, 0.12), transparent 62%),
-      linear-gradient(145deg, #080d16 0%, #0a0d14 48%, #0d0b17 100%);
+      radial-gradient(34rem 34rem at 4% -12%, rgba(38, 104, 199, 0.34), transparent 54%),
+      radial-gradient(30rem 30rem at 104% 5%, rgba(115, 65, 204, 0.31), transparent 55%),
+      radial-gradient(38rem 36rem at 48% 112%, rgba(15, 140, 168, 0.24), transparent 57%),
+      linear-gradient(135deg, #050b16 0%, #07101e 47%, #100b24 100%);
     background-attachment: fixed;
     min-height: 100vh;
+    isolation: isolate;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    z-index: -1;
+    inset: -16vmax;
+    pointer-events: none;
+    background:
+      linear-gradient(116deg, transparent 19%, rgba(114, 177, 255, 0.21) 30%, transparent 42%),
+      linear-gradient(296deg, transparent 38%, rgba(180, 108, 255, 0.2) 52%, transparent 64%),
+      radial-gradient(circle at 20% 62%, rgba(86, 207, 232, 0.22) 0 7%, transparent 23%),
+      radial-gradient(circle at 78% 35%, rgba(153, 112, 255, 0.25) 0 9%, transparent 26%);
+    filter: blur(24px) saturate(135%);
+    transform: translateZ(0);
   }
 }

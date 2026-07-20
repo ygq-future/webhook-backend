@@ -60,14 +60,14 @@ export default function Dashboard() {
           </Button>
         </div>
         <CardContent>
-          <Table>
+          <Table className="mobile-data-cards">
             <TableHeader>
               <TableRow>
                 <TableHead>时间</TableHead>
-                <TableHead className="hidden sm:table-cell">渠道</TableHead>
-                <TableHead className="hidden md:table-cell">目标</TableHead>
+                <TableHead>渠道</TableHead>
+                <TableHead>目标</TableHead>
                 <TableHead>状态</TableHead>
-                <TableHead className="hidden lg:table-cell">详情</TableHead>
+                <TableHead>详情</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -87,19 +87,21 @@ export default function Dashboard() {
               )}
               {data?.recent.map(log => (
                 <TableRow key={log.id}>
-                  <TableCell className="text-muted-foreground whitespace-nowrap">
+                  <TableCell data-label="时间" className="text-muted-foreground whitespace-nowrap">
                     {new Date(log.createdAt).toLocaleString('zh-CN')}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">{log.channel ?? '-'}</TableCell>
-                  <TableCell className="hidden max-w-[220px] truncate md:table-cell">{log.target ?? '-'}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="渠道">{log.channel ?? '-'}</TableCell>
+                  <TableCell data-label="目标" className="max-w-[220px] truncate">
+                    {log.target ?? '-'}
+                  </TableCell>
+                  <TableCell data-label="状态">
                     {log.status === 'success' ? (
                       <Badge variant="success">成功</Badge>
                     ) : (
                       <Badge variant="destructive">失败</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground hidden max-w-[240px] truncate lg:table-cell">
+                  <TableCell data-label="详情" className="text-muted-foreground max-w-[240px] truncate">
                     {log.error ?? '-'}
                   </TableCell>
                 </TableRow>

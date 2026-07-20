@@ -44,7 +44,7 @@ statsRouter.get('/inbound', async c => {
   const pageSize = c.req.query('pageSize')
   const data = await repos.logs.listInbound({
     endpointId: endpointId ? Number(endpointId) : undefined,
-    mode: mode === 'forward' || mode === 'reply' ? mode : 'reply',
+    mode: mode === 'forward' || mode === 'reply' ? mode : 'forward',
     status: status === 'success' || status === 'failed' ? status : undefined,
     page: positiveInt(page, 1),
     pageSize: positiveInt(pageSize, 20),

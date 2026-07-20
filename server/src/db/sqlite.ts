@@ -417,7 +417,7 @@ export function createSqliteRepos(filePath: string): Repos {
       async listInbound(filter: InboundLogFilter = {}): Promise<InboundLogPage> {
         const where: string[] = []
         const params: (number | string)[] = []
-        const mode = filter.mode ?? 'reply'
+        const mode = filter.mode ?? 'forward'
         const page = Math.max(1, Math.floor(filter.page ?? 1))
         const pageSize = Math.min(100, Math.max(1, Math.floor(filter.pageSize ?? 20)))
         if (filter.endpointId !== undefined) {

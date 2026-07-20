@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Webhook, Mail, ScrollText, LogOut, Menu, X } from 'lucide-react'
 
@@ -54,6 +54,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [drawerOffset, setDrawerOffset] = useState(0)
+  const [draggingDrawer, setDraggingDrawer] = useState(false)
+  const drawerTouch = useRef<{ pointerId: number; startX: number } | null>(null)
+
+  function closeMobileMenu() {
+    drawerTouch.current = null
+    setDrawerOffset(0)
+    setDraggingDrawer(false)
+    setMobileOpen(false)
+  }
+
+  function handleDrawerPointerDown(e: React.PointerEvent<HTMLElement>) {
+    if (e.pointerType !== 'touch') return
+    drawerTouch.current = { pointerId: e.pointerId, startX: e.clientX }
+    setDraggingDrawer(true)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function handleDrawerPointerMove(e: React.PointerEvent<HTMLElement>) {
+    const touch = drawerTouch.current
+    if (!touch || touch.pointerId !== e.pointerId) return
+    setDrawerOffset(Math.min(0, e.clientX - touch.startX))
+  }
+
+  function handleDrawerPointerEnd(e: React.PointerEvent<HTMLElement>) {
+    const touch = drawerTouch.current
+    if (!touch || touch.pointerId !== e.pointerId) return
+    const moved = e.clientX - touch.startX
+    drawerTouch.current = null
+    setDraggingDrawer(false)
+    setDrawerOffset(0)
+    if (moved < -72) setMobileOpen(false)
+  }
 
   async function handleLogout() {
     await logout()
@@ -89,27 +122,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
           'fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 md:hidden',
           mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
-        onClick={() => setMobileOpen(false)}
+        onClick={closeMobileMenu}
         aria-hidden
       />
       <aside
         className={cn(
-          'glass fixed top-0 left-0 z-50 flex h-full w-64 flex-col rounded-none transition-transform duration-300 ease-out md:hidden',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full',
-        )}>
+          'glass fixed top-0 left-0 z-50 flex h-full w-64 touch-pan-y flex-col rounded-none transition-transform duration-300 ease-out md:hidden',
+          mobileOpen ? '' : '-translate-x-full',
+          draggingDrawer && 'transition-none',
+        )}
+        onPointerDown={handleDrawerPointerDown}
+        onPointerMove={handleDrawerPointerMove}
+        onPointerUp={handleDrawerPointerEnd}
+        onPointerCancel={handleDrawerPointerEnd}
+        style={mobileOpen ? { transform: `translateX(${drawerOffset}px)` } : undefined}>
         <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
           <div className="flex items-center gap-2">
             <Webhook className="text-primary h-5 w-5" />
             <span className="font-semibold tracking-tight">转发中心</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} aria-label="关闭菜单">
+          <Button variant="ghost" size="icon" onClick={closeMobileMenu} aria-label="关闭菜单">
             <X className="h-5 w-5" />
           </Button>
         </div>
-        <NavList onNavigate={() => setMobileOpen(false)} />
+        <NavList onNavigate={closeMobileMenu} />
         <UserFooter
           onLogout={() => {
-            setMobileOpen(false)
+            closeMobileMenu()
             void handleLogout()
           }}
         />

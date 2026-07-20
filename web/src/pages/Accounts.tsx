@@ -37,6 +37,7 @@ function AccountDialog({
 }) {
   const qc = useQueryClient()
   const [form, setForm] = React.useState<FormState>(EMPTY)
+  const emailRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     if (open) {
@@ -87,7 +88,11 @@ function AccountDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent
+        onOpenAutoFocus={e => {
+          e.preventDefault()
+          requestAnimationFrame(() => emailRef.current?.focus({ preventScroll: true }))
+        }}>
         <DialogHeader>
           <DialogTitle>{editing ? '编辑邮箱账号' : '新增邮箱账号'}</DialogTitle>
         </DialogHeader>
@@ -137,6 +142,7 @@ function AccountDialog({
           <div className="space-y-2">
             <Label>邮箱地址</Label>
             <Input
+              ref={emailRef}
               type="email"
               value={form.email}
               onChange={e => setForm({ ...form, email: e.target.value })}
@@ -211,13 +217,13 @@ export default function Accounts() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="mobile-data-cards">
             <TableHeader>
               <TableRow>
                 <TableHead>名称</TableHead>
-                <TableHead className="hidden sm:table-cell">服务商</TableHead>
+                <TableHead>服务商</TableHead>
                 <TableHead>邮箱</TableHead>
-                <TableHead className="hidden md:table-cell">SMTP</TableHead>
+                <TableHead>SMTP</TableHead>
                 <TableHead>授权码</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -239,18 +245,20 @@ export default function Accounts() {
               )}
               {data?.map(a => (
                 <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.name}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{PROVIDER_LABEL[a.provider] ?? a.provider}</TableCell>
-                  <TableCell>{a.email}</TableCell>
-                  <TableCell className="text-muted-foreground hidden md:table-cell">
+                  <TableCell data-label="名称" className="font-medium">
+                    {a.name}
+                  </TableCell>
+                  <TableCell data-label="服务商">{PROVIDER_LABEL[a.provider] ?? a.provider}</TableCell>
+                  <TableCell data-label="邮箱">{a.email}</TableCell>
+                  <TableCell data-label="SMTP" className="text-muted-foreground">
                     {a.host}:{a.port}
                     {a.secure ? ' (SSL)' : ''}
                     {a.proxy ? <div className="text-xs text-white/50">代理已配置</div> : null}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="授权码">
                     {a.hasSecret ? <Badge variant="success">已配置</Badge> : <Badge variant="secondary">未配置</Badge>}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="操作" className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
                         <Pencil className="h-4 w-4" />

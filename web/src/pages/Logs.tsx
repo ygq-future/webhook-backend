@@ -171,7 +171,7 @@ function InboundCard({ item, open, onToggle }: { item: InboundWithOutbound; open
 export default function Logs() {
   const [expanded, setExpanded] = React.useState<Set<number>>(new Set())
   const [onlyFailed, setOnlyFailed] = React.useState(false)
-  const [mode, setMode] = React.useState<'reply' | 'forward'>('reply')
+  const [mode, setMode] = React.useState<'reply' | 'forward'>('forward')
   const [page, setPage] = React.useState(1)
   const pageSize = 20
 

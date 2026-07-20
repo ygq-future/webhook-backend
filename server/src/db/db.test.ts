@@ -124,12 +124,12 @@ describe('sqlite repos', () => {
       status: 'received',
     })
 
-    const replies = await repos.logs.listInbound()
+    const replies = await repos.logs.listInbound({ mode: 'reply' })
     expect(replies.total).toBe(1)
     expect(replies.items[0].inbound.mode).toBe('reply')
     expect(replies.items[0].inbound.headers).toEqual({ Cookie: '[REDACTED]' })
 
-    const forwards = await repos.logs.listInbound({ mode: 'forward', page: 1, pageSize: 1 })
+    const forwards = await repos.logs.listInbound({ page: 1, pageSize: 1 })
     expect(forwards.total).toBe(1)
     expect(forwards.items[0].outbound[0].requestHeaders).toEqual({
       authorization: '[REDACTED]',

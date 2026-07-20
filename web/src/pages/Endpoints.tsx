@@ -71,15 +71,15 @@ export default function Endpoints() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="mobile-data-cards">
             <TableHeader>
               <TableRow>
                 <TableHead>子路径</TableHead>
                 <TableHead>标题</TableHead>
-                <TableHead className="hidden sm:table-cell">方法</TableHead>
-                <TableHead className="hidden sm:table-cell">校验</TableHead>
-                <TableHead className="hidden md:table-cell">转发目标</TableHead>
-                <TableHead className="hidden sm:table-cell">启用</TableHead>
+                <TableHead>方法</TableHead>
+                <TableHead>校验</TableHead>
+                <TableHead>转发目标</TableHead>
+                <TableHead>启用</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -102,7 +102,7 @@ export default function Endpoints() {
                 const isHmac = (ep.auth as { type?: string })?.type === 'hmac'
                 return (
                   <TableRow key={ep.id}>
-                    <TableCell>
+                    <TableCell data-label="子路径">
                       <button
                         className="hover:text-primary flex items-center gap-1.5 font-mono text-sm"
                         onClick={() => copyUrl(ep.subpath)}
@@ -111,22 +111,24 @@ export default function Endpoints() {
                         <Copy className="h-3.5 w-3.5 opacity-50" />
                       </button>
                     </TableCell>
-                    <TableCell className="font-medium">{ep.title}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell data-label="标题" className="font-medium">
+                      {ep.title}
+                    </TableCell>
+                    <TableCell data-label="方法">
                       <span className="text-muted-foreground font-mono text-xs">
                         {ep.methods.includes('*') ? 'ANY' : ep.methods.join(',')}
                       </span>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell data-label="校验">
                       {isHmac ? <Badge variant="outline">HMAC</Badge> : <Badge variant="secondary">无</Badge>}
                     </TableCell>
-                    <TableCell className="text-muted-foreground hidden md:table-cell">
+                    <TableCell data-label="转发目标" className="text-muted-foreground">
                       {ep.mode === 'reply' ? '直接响应' : channelSummary(ep)}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell data-label="启用">
                       <Switch checked={ep.active} onCheckedChange={() => toggleMutation.mutate(ep.id)} />
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell data-label="操作" className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(ep)}>
                           <Pencil className="h-4 w-4" />
