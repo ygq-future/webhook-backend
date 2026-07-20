@@ -127,7 +127,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       />
       <aside
         className={cn(
-          'glass fixed top-0 left-0 z-50 flex h-full w-64 touch-pan-y flex-col rounded-none transition-transform duration-300 ease-out md:hidden',
+          'frosted-drawer glass fixed top-0 left-0 z-50 flex h-full w-64 touch-pan-y flex-col rounded-none transition-transform duration-300 ease-out md:hidden',
           mobileOpen ? '' : '-translate-x-full',
           draggingDrawer && 'transition-none',
         )}
