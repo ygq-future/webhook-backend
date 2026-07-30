@@ -15,7 +15,7 @@ const NAV = [
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <nav className="flex-1 space-y-2 p-3">
+    <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
       {NAV.map(item => (
         <NavLink
           key={item.to}
@@ -105,9 +105,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-dvh overflow-hidden">
       {/* 桌面端：固定侧边栏 */}
-      <aside className="glass glass-chrome hidden w-56 shrink-0 flex-col rounded-none md:flex">
+      <aside className="glass glass-chrome hidden h-full w-56 shrink-0 flex-col rounded-none md:flex">
         <div className="flex h-16 items-center gap-2 border-b border-white/10 px-4">
           <Webhook className="text-primary h-5 w-5" />
           <span className="font-semibold tracking-tight">转发中心</span>
@@ -165,10 +165,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         />
       </aside>
 
-      <main className="flex-1 overflow-x-hidden pt-14 md:pt-0">
+      <main className="h-full min-w-0 flex-1 overflow-hidden pt-14 md:pt-0">
         <div
           key={location.pathname}
-          className="animate-in fade-in-0 slide-in-from-bottom-1 mx-auto max-w-5xl px-4 py-6 duration-300 sm:px-6 sm:py-8">
+          className="animate-in fade-in-0 slide-in-from-bottom-1 mx-auto h-full min-h-0 max-w-5xl px-4 py-6 duration-300 sm:px-6 sm:py-8">
           {children}
         </div>
       </main>

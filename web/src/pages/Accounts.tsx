@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { PageBody, PageHeader, PageLayout } from '@/components/page-layout'
 import { accountsApi, type AccountRow } from '@/lib/api'
 
 interface FormState {
@@ -203,8 +204,8 @@ export default function Accounts() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <PageLayout>
+      <PageHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">邮箱账号</h1>
           <p className="text-muted-foreground text-sm">用于 Email 转发通道的发件账号</p>
@@ -213,74 +214,80 @@ export default function Accounts() {
           <Plus className="h-4 w-4" />
           新增账号
         </Button>
-      </div>
+      </PageHeader>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table className="mobile-data-cards">
-            <TableHeader>
-              <TableRow>
-                <TableHead>名称</TableHead>
-                <TableHead>服务商</TableHead>
-                <TableHead>邮箱</TableHead>
-                <TableHead>SMTP</TableHead>
-                <TableHead>授权码</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading && (
+      <PageBody>
+        <Card>
+          <CardContent className="p-0">
+            <Table className="mobile-data-cards">
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-muted-foreground text-center">
-                    加载中…
-                  </TableCell>
+                  <TableHead>名称</TableHead>
+                  <TableHead>服务商</TableHead>
+                  <TableHead>邮箱</TableHead>
+                  <TableHead>SMTP</TableHead>
+                  <TableHead>授权码</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
                 </TableRow>
-              )}
-              {!isLoading && (data?.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-muted-foreground text-center">
-                    暂无账号，点击右上角新增
-                  </TableCell>
-                </TableRow>
-              )}
-              {data?.map(a => (
-                <TableRow key={a.id}>
-                  <TableCell data-label="名称" className="font-medium">
-                    {a.name}
-                  </TableCell>
-                  <TableCell data-label="服务商">{PROVIDER_LABEL[a.provider] ?? a.provider}</TableCell>
-                  <TableCell data-label="邮箱">{a.email}</TableCell>
-                  <TableCell data-label="SMTP" className="text-muted-foreground">
-                    {a.host}:{a.port}
-                    {a.secure ? ' (SSL)' : ''}
-                    {a.proxy ? <div className="text-xs text-white/50">代理已配置</div> : null}
-                  </TableCell>
-                  <TableCell data-label="授权码">
-                    {a.hasSecret ? <Badge variant="success">已配置</Badge> : <Badge variant="secondary">未配置</Badge>}
-                  </TableCell>
-                  <TableCell data-label="操作" className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm(`确认删除账号「${a.name}」？`)) removeMutation.mutate(a.id)
-                        }}>
-                        <Trash2 className="text-destructive h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-muted-foreground text-center">
+                      加载中…
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!isLoading && (data?.length ?? 0) === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-muted-foreground text-center">
+                      暂无账号，点击右上角新增
+                    </TableCell>
+                  </TableRow>
+                )}
+                {data?.map(a => (
+                  <TableRow key={a.id}>
+                    <TableCell data-label="名称" className="font-medium">
+                      {a.name}
+                    </TableCell>
+                    <TableCell data-label="服务商">{PROVIDER_LABEL[a.provider] ?? a.provider}</TableCell>
+                    <TableCell data-label="邮箱">{a.email}</TableCell>
+                    <TableCell data-label="SMTP" className="text-muted-foreground">
+                      {a.host}:{a.port}
+                      {a.secure ? ' (SSL)' : ''}
+                      {a.proxy ? <div className="text-xs text-white/50">代理已配置</div> : null}
+                    </TableCell>
+                    <TableCell data-label="授权码">
+                      {a.hasSecret ? (
+                        <Badge variant="success">已配置</Badge>
+                      ) : (
+                        <Badge variant="secondary">未配置</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell data-label="操作" className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (confirm(`确认删除账号「${a.name}」？`)) removeMutation.mutate(a.id)
+                          }}>
+                          <Trash2 className="text-destructive h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </PageBody>
 
       <AccountDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} />
-    </div>
+    </PageLayout>
   )
 }

@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Inbox, ArrowUpRight, Clock, RefreshCw } from
 
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PageBody, PageHeader, PageLayout } from '@/components/page-layout'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { statsApi, type InboundWithOutbound, type LogRow } from '@/lib/api'
 
@@ -198,8 +199,8 @@ export default function Logs() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <PageLayout>
+      <PageHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">入站日志</h1>
           <p className="text-muted-foreground text-sm">查看已通过校验的入站请求；forward 会附带出站明细</p>
@@ -228,50 +229,52 @@ export default function Logs() {
             {onlyFailed ? '显示全部' : '仅看失败'}
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
-      {isLoading ? (
-        <div className="text-muted-foreground py-12 text-center text-sm">加载中…</div>
-      ) : list.length === 0 ? (
-        <div className="text-muted-foreground py-12 text-center text-sm">
-          {onlyFailed ? '没有失败的入站记录' : '暂无入站日志，先发一条 Webhook 试试'}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {list.map(i => (
-            <InboundCard
-              key={i.inbound.id}
-              item={i}
-              open={expanded.has(i.inbound.id)}
-              onToggle={() => toggle(i.inbound.id)}
-            />
-          ))}
-        </div>
-      )}
-
-      {data && data.total > 0 && (
-        <div className="flex flex-col gap-3 border-t border-white/10 pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-muted-foreground">
-            第 {data.page} / {Math.max(1, Math.ceil(data.total / data.pageSize))} 页 · 共 {data.total} 条
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1 || isFetching}
-              onClick={() => setPage(p => Math.max(1, p - 1))}>
-              上一页
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!data.hasNext || isFetching}
-              onClick={() => setPage(p => p + 1)}>
-              下一页
-            </Button>
+      <PageBody className="space-y-6 pr-1">
+        {isLoading ? (
+          <div className="text-muted-foreground py-12 text-center text-sm">加载中…</div>
+        ) : list.length === 0 ? (
+          <div className="text-muted-foreground py-12 text-center text-sm">
+            {onlyFailed ? '没有失败的入站记录' : '暂无入站日志，先发一条 Webhook 试试'}
           </div>
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="space-y-3">
+            {list.map(i => (
+              <InboundCard
+                key={i.inbound.id}
+                item={i}
+                open={expanded.has(i.inbound.id)}
+                onToggle={() => toggle(i.inbound.id)}
+              />
+            ))}
+          </div>
+        )}
+
+        {data && data.total > 0 && (
+          <div className="flex flex-col gap-3 border-t border-white/10 pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-muted-foreground">
+              第 {data.page} / {Math.max(1, Math.ceil(data.total / data.pageSize))} 页 · 共 {data.total} 条
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1 || isFetching}
+                onClick={() => setPage(p => Math.max(1, p - 1))}>
+                上一页
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!data.hasNext || isFetching}
+                onClick={() => setPage(p => p + 1)}>
+                下一页
+              </Button>
+            </div>
+          </div>
+        )}
+      </PageBody>
+    </PageLayout>
   )
 }
