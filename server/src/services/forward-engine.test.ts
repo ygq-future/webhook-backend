@@ -91,4 +91,15 @@ describe('forwardEvent', () => {
     expect(outcomes[0].ok).toBe(false)
     expect(outcomes[0].detail).toContain('not registered')
   })
+
+  test('禁用目标不会投递，也不会写出站日志', async () => {
+    repos = await createSqliteRepos(':memory:')
+    const target = { channel: 'mock', active: false } as unknown as ForwardTarget
+    const endpoint = makeEndpoint([target])
+
+    const outcomes = await forwardEvent(endpoint, { method: 'POST', raw: '{}', headers: {}, query: {} }, repos)
+
+    expect(outcomes).toEqual([])
+    expect(await repos.logs.list({ endpointId: endpoint.id })).toEqual([])
+  })
 })

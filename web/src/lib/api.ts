@@ -120,6 +120,8 @@ export type HttpOutAuth =
 
 export interface EmailTarget {
   channel: 'email'
+  /** 旧配置可能没有该字段，缺省按启用处理 */
+  active?: boolean
   accountId: string
   to: string
   subjectTpl?: string
@@ -129,6 +131,8 @@ export interface EmailTarget {
 
 export interface HttpTarget {
   channel: 'http'
+  /** 旧配置可能没有该字段，缺省按启用处理 */
+  active?: boolean
   url: string
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   headers?: Record<string, string>

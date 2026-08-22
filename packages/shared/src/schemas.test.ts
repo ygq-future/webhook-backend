@@ -3,6 +3,7 @@ import { emailTargetSchema, httpTargetSchema, endpointSchema, forwardTargetSchem
 
 test('emailTargetSchema: 合法邮件目标使用默认值', () => {
   const ok = emailTargetSchema.parse({ channel: 'email', accountId: 'a1', to: 'a@b.com' })
+  expect(ok.active).toBe(true)
   expect(ok.subjectTpl).toBe('Webhook 通知')
   expect(ok.format).toBe('text')
 })
@@ -14,6 +15,7 @@ test('httpTargetSchema: 合法出站 HTTP 目标（含 dot-path 抽取）', () =
     method: 'POST',
     bodyExpr: 'data.message',
   })
+  expect(ok.active).toBe(true)
   expect(ok.timeoutMs).toBe(10000)
   expect(ok.retries).toBe(3)
 })

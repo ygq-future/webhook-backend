@@ -43,11 +43,22 @@ describe('sqlite repos', () => {
       methods: ['POST'],
       parser: { source: 'body', contentType: 'json', mapping: { text: 'text' } },
       auth: { type: 'none' },
-      targets: [{ channel: 'email', accountId: '1', to: 'me@x.com', subjectTpl: 's', bodyTpl: 'b', format: 'text' }],
+      targets: [
+        {
+          channel: 'email',
+          active: false,
+          accountId: '1',
+          to: 'me@x.com',
+          subjectTpl: 's',
+          bodyTpl: 'b',
+          format: 'text',
+        },
+      ],
       reply: { status: 200, contentType: 'json', body: '{"ok":true}' },
     })
     expect(ep.methods).toEqual(['POST'])
     expect(ep.targets[0].channel).toBe('email')
+    expect(ep.targets[0].active).toBe(false)
     expect(ep.reply?.status).toBe(200)
 
     const found = await repos.endpoints.getBySubpath('sms-inbox')
@@ -76,6 +87,7 @@ describe('sqlite repos', () => {
       targets: [
         {
           channel: 'http',
+          active: true,
           url: 'https://example.com',
           method: 'POST',
           contentType: 'json',

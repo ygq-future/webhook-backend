@@ -75,6 +75,8 @@ export type HttpOutAuth = z.infer<typeof httpOutAuthSchema>
 
 export const emailTargetSchema = z.object({
   channel: z.literal('email'),
+  /** 是否启用此转发目标；旧配置缺省视为启用 */
+  active: z.boolean().default(true),
   /** 使用的邮箱账号 id */
   accountId: z.string().min(1),
   to: z.string().min(1),
@@ -86,6 +88,8 @@ export type EmailTarget = z.infer<typeof emailTargetSchema>
 
 export const httpTargetSchema = z.object({
   channel: z.literal('http'),
+  /** 是否启用此转发目标；旧配置缺省视为启用 */
+  active: z.boolean().default(true),
   url: z.string().url(),
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('POST'),
   headers: z.record(z.string(), z.string()).optional(),

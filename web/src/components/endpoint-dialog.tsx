@@ -17,6 +17,7 @@ import { previewHttpBody } from '@/lib/expr'
 /* ---------------- 表单内部类型（宽松，提交前归一） ---------------- */
 interface EmailTargetForm {
   channel: 'email'
+  active: boolean
   accountId: string
   to: string
   subjectTpl: string
@@ -25,6 +26,7 @@ interface EmailTargetForm {
 }
 interface HttpTargetForm {
   channel: 'http'
+  active: boolean
   url: string
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   bodyExpr: string
@@ -78,6 +80,7 @@ const SAMPLE_BODY = '{\n  "message": "hello http forward",\n  "from": "alice",\n
 
 const emptyEmailTarget = (): EmailTargetForm => ({
   channel: 'email',
+  active: true,
   accountId: '',
   to: '',
   subjectTpl: 'Webhook 通知',
@@ -86,6 +89,7 @@ const emptyEmailTarget = (): EmailTargetForm => ({
 })
 const emptyHttpTarget = (): HttpTargetForm => ({
   channel: 'http',
+  active: true,
   url: '',
   method: 'POST',
   bodyExpr: '',
@@ -220,6 +224,7 @@ function toForm(ep: EndpointRow): FormState {
       t.channel === 'email'
         ? {
             channel: 'email',
+            active: t.active !== false,
             accountId: t.accountId,
             to: t.to,
             subjectTpl: t.subjectTpl ?? 'Webhook 通知',
@@ -228,6 +233,7 @@ function toForm(ep: EndpointRow): FormState {
           }
         : {
             channel: 'http',
+            active: t.active !== false,
             url: t.url,
             method: t.method ?? 'POST',
             bodyExpr: t.bodyExpr ?? '',
@@ -295,6 +301,7 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
     if (t.channel === 'email') {
       return {
         channel: 'email',
+        active: t.active,
         accountId: t.accountId,
         to: t.to,
         subjectTpl: t.subjectTpl,
@@ -317,6 +324,7 @@ function buildPayload(form: FormState, editing: boolean): Record<string, unknown
     const headers = parseHeaders(t.headers)
     return {
       channel: 'http',
+      active: t.active,
       url: t.url,
       method: t.method,
       bodyExpr: t.bodyExpr || undefined,
@@ -822,7 +830,7 @@ export function EndpointDialog({
                 </Button>
               </div>
               {form.targets.map((t, i) => (
-                <div key={i} className="glass-soft space-y-3 rounded-2xl p-4">
+                <div key={i} className={`glass-soft space-y-3 rounded-2xl p-4 ${!t.active ? 'opacity-75' : ''}`}>
                   <div className="flex items-center gap-3">
                     <Select value={t.channel} onValueChange={v => switchChannel(i, v as 'email' | 'http')}>
                       <SelectTrigger className="w-32">
@@ -833,7 +841,16 @@ export function EndpointDialog({
                         <SelectItem value="http">HTTP</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="flex-1" />
+                    <div className="flex flex-1 items-center justify-end gap-2">
+                      <span className={t.active ? 'text-xs font-medium text-white' : 'text-muted-foreground text-xs'}>
+                        {t.active ? '已启用' : '已禁用'}
+                      </span>
+                      <Switch
+                        checked={t.active}
+                        onCheckedChange={active => updateTarget(i, { active })}
+                        aria-label={t.active ? `禁用转发目标 ${i + 1}` : `启用转发目标 ${i + 1}`}
+                      />
+                    </div>
                     {form.targets.length > 1 && (
                       <Button type="button" variant="ghost" size="icon" onClick={() => removeTarget(i)}>
                         <Trash2 className="text-destructive h-4 w-4" />

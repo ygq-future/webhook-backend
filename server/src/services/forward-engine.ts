@@ -65,6 +65,9 @@ export async function forwardEvent(
   const outcomes: ForwardOutcome[] = []
 
   for (const target of endpoint.targets) {
+    // 兼容 active 字段加入前的旧配置：未设置时按启用处理。
+    if (target.active === false) continue
+
     const channel = getChannel(target.channel)
     let ok = false
     let detail: string | undefined
